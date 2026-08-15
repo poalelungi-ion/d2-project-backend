@@ -24,7 +24,7 @@ import { TABS, STEPS } from '../../utils/constants';
 
 export const BatchUploadWizard = (props) => {
   const { 
-    themeMode, setThemeMode, activeTab, setActiveTab, coursesData, setCoursesData,
+        themeMode, setThemeMode, activeTab, setActiveTab, coursesData, setCoursesData,
     studentsData, setStudentsData, selectedStudent, setSelectedStudent, selectedCourse,
     setSelectedCourse, analyticsStudent, setAnalyticsStudent, analyticsStudentTranscript,
     setAnalyticsStudentTranscript, courseFormOpen, setCourseFormOpen, courseFormMode,
@@ -41,11 +41,10 @@ export const BatchUploadWizard = (props) => {
     setStudentFormErrors, editStudentVersion, setEditStudentVersion, searchQuery,
     setSearchQuery, coursesPage, setCoursesPage, viewMode, setViewMode, newCourseId,
     setNewCourseId, studentColumnDefs,
-    handleTabChange, fetchStats, fetchStudents, fetchCourses, uploadDemoFile, handleUploadNext,
-    handleUploadBack, confirmUpload, resetUploadForm, fetchCourseDetails, handleCourseSave,
-    handleCourseDelete, handleCourseArchiveToggle, handleStudentSave, handleStudentStatusChange,
-    handleStudentDelete, fetchStudentDetails, handleAddGrade, handleDemoSelection,
-    fetchDashboardAnalytics, fetchStudentAnalytics, theme, drawerWidth
+    toggleTheme, fetchData, fetchStudentTranscript, saveGradesToDB, openCourseForm, 
+    openStudentForm, validateStudentForm, handleSaveStudent, validateCourseForm, 
+    handleSaveCourse, handleUploadSubmit, updateStudentProgram, handleArchiveCourse, 
+    handleStudentStatus, handleAddGrade, handleUpload, handleConfirmUpload
   } = props;
   
     const steps = ['Upload file', 'Course', 'Map columns', 'Review & fix', 'Done'];

@@ -651,11 +651,10 @@ export default function App() {
     setStudentFormErrors, editStudentVersion, setEditStudentVersion, searchQuery,
     setSearchQuery, coursesPage, setCoursesPage, viewMode, setViewMode, newCourseId,
     setNewCourseId, studentColumnDefs,
-    handleTabChange, fetchStats, fetchStudents, fetchCourses, uploadDemoFile, handleUploadNext,
-    handleUploadBack, confirmUpload, resetUploadForm, fetchCourseDetails, handleCourseSave,
-    handleCourseDelete, handleCourseArchiveToggle, handleStudentSave, handleStudentStatusChange,
-    handleStudentDelete, fetchStudentDetails, handleAddGrade, handleDemoSelection,
-    fetchDashboardAnalytics, fetchStudentAnalytics, theme, drawerWidth
+    toggleTheme, fetchData, fetchStudentTranscript, saveGradesToDB, openCourseForm, 
+    openStudentForm, validateStudentForm, handleSaveStudent, validateCourseForm, 
+    handleSaveCourse, handleUploadSubmit, updateStudentProgram, handleArchiveCourse, 
+    handleStudentStatus, handleAddGrade, handleUpload, handleConfirmUpload
   };
 
   return (
