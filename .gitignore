@@ -1,0 +1,25 @@
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+venv/
+env/
+.env
+
+# Node
+node_modules/
+dist/
+build/
+.npm
+.yarn
+
+# IDEs
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# DBs
+*.sqlite3
+*.db
