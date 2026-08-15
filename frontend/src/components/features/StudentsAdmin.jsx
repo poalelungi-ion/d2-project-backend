@@ -1,4 +1,6 @@
 import React, { useState, useEffect } from 'react';
+import { AgGridReact } from 'ag-grid-react';
+import { Divider, ToggleButtonGroup, ToggleButton } from '@mui/material';
 import { 
   Box, Typography, Grid, Card, CardContent, Button, TextField, 
   Stepper, Step, StepLabel, Select, MenuItem, FormControl, InputLabel,
@@ -41,7 +43,7 @@ export const StudentsAdmin = (props) => {
     studentFormMode, setStudentFormMode, studentForm, setStudentForm, studentFormErrors,
     setStudentFormErrors, editStudentVersion, setEditStudentVersion, searchQuery,
     setSearchQuery, coursesPage, setCoursesPage, viewMode, setViewMode, newCourseId,
-    setNewCourseId, studentColumnDefs,
+    setNewCourseId, studentColumnDefs, studentRosterColumnDefs,
     toggleTheme, fetchData, fetchStudentTranscript, saveGradesToDB, openCourseForm, 
     openStudentForm, validateStudentForm, handleSaveStudent, validateCourseForm, 
     handleSaveCourse, handleUploadSubmit, updateStudentProgram, handleArchiveCourse, 

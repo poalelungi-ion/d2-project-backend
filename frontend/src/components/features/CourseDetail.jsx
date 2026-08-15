@@ -1,4 +1,10 @@
-import React, { useState, useEffect } from 'react';
+import React, { useRef, useState, useEffect } from 'react';
+import { Legend } from 'recharts';
+import { Restore as RestoreIcon } from '@mui/icons-material';
+import { ChevronLeft as ChevronLeftIcon } from '@mui/icons-material';
+import { CloudUpload as CloudUploadIcon } from '@mui/icons-material';
+import { AgGridReact } from 'ag-grid-react';
+import { Archive as ArchiveIcon } from '@mui/icons-material';
 import { 
   Box, Typography, Grid, Card, CardContent, Button, TextField, 
   Stepper, Step, StepLabel, Select, MenuItem, FormControl, InputLabel,
@@ -46,6 +52,44 @@ export const CourseDetail = (props) => {
     handleSaveCourse, handleUploadSubmit, updateStudentProgram, handleArchiveCourse, 
     handleStudentStatus, handleAddGrade, handleUpload, handleConfirmUpload
   } = props;
+  const courseGridRef = useRef(null);
+
+  const getGradeDistributionData = () => {
+    if (!selectedCourse || !selectedCourse.marks) return [];
+    const dist = {};
+    selectedCourse.marks.forEach(m => {
+      const g = m.grade.toString();
+      dist[g] = (dist[g] || 0) + 1;
+    });
+    return Object.keys(dist).sort((a,b) => parseFloat(a) - parseFloat(b)).map(k => ({ grade: k, count: dist[k] }));
+  };
+
+  const getPassFailData = () => {
+    if (!selectedCourse || !selectedCourse.marks) return [];
+    let pass = 0, fail = 0;
+    selectedCourse.marks.forEach(m => {
+      if (m.passed) pass++; else fail++;
+    });
+    return [
+      { name: 'Passed', value: pass, fill: '#2E7D32' },
+      { name: 'Failed', value: fail, fill: '#D32F2F' }
+    ];
+  };
+
+  const getLongitudinalData = () => {
+    if (!analyticsStudentTranscript.length) return [];
+    const semMap = {};
+    analyticsStudentTranscript.forEach(t => {
+      if (!semMap[t.semester]) semMap[t.semester] = { sum: 0, count: 0 };
+      semMap[t.semester].sum += t.grade;
+      semMap[t.semester].count += 1;
+    });
+    return Object.keys(semMap).sort().map(sem => ({
+      semester: sem,
+      average: parseFloat((semMap[sem].sum / semMap[sem].count).toFixed(2))
+    }));
+  };
+
   return (
     <Fade in={true} timeout={800}>
       <Box sx={{ flexGrow: 1, display: 'flex', flexDirection: 'column', minHeight: '100%' }}>

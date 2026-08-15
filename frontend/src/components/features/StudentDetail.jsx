@@ -1,4 +1,9 @@
-import React, { useState, useEffect } from 'react';
+import React, { useRef, useState, useEffect } from 'react';
+import { Restore as RestoreIcon } from '@mui/icons-material';
+import { Divider } from '@mui/material';
+import { ChevronLeft as ChevronLeftIcon } from '@mui/icons-material';
+import { Cancel as CancelIcon } from '@mui/icons-material';
+import { AgGridReact } from 'ag-grid-react';
 import { 
   Box, Typography, Grid, Card, CardContent, Button, TextField, 
   Stepper, Step, StepLabel, Select, MenuItem, FormControl, InputLabel,
@@ -46,6 +51,7 @@ export const StudentDetail = (props) => {
     handleSaveCourse, handleUploadSubmit, updateStudentProgram, handleArchiveCourse, 
     handleStudentStatus, handleAddGrade, handleUpload, handleConfirmUpload
   } = props;
+  const studentGridRef = useRef(null);
   return (
     <Fade in={true} timeout={800}>
       <Box sx={{ flexGrow: 1, display: 'flex', flexDirection: 'column', height: '100%' }}>

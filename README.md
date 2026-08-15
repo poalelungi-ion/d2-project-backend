@@ -5,8 +5,8 @@ This document serves as the comprehensive guide mapping our agile User Stories a
 ## 1. System Architecture Overview
 
 The system follows a modern decoupled architecture:
-* **Frontend Layer**: React.js SPA utilizing Material-UI (MUI) for responsive design and `AgGridReact` for enterprise-grade data handling.
-* **Backend Layer**: FastAPI (Python) providing highly concurrent REST endpoints, strict Pydantic schemas for data validation, and SQLAlchemy for ORM.
+* **Frontend Layer**: React.js SPA utilizing Material-UI (MUI) for responsive design and `AgGridReact` for enterprise-grade data handling. The UI is strictly decoupled into modular feature components (e.g., `AnalysisHub.jsx`, `CoursesAdmin.jsx`, `StudentsAdmin.jsx`) inside `frontend/src/components/features/`.
+* **Backend Layer**: FastAPI (Python) providing highly concurrent REST endpoints. The API is completely modularized using `APIRouter`, with endpoints cleanly separated into `courses.py`, `students.py`, `upload.py`, etc., inside `backend/routers/`. Data validation is handled via strict Pydantic schemas, and SQLAlchemy handles the ORM.
 * **Database Layer**: PostgreSQL database managing relational integrity.
 * **Infrastructure**: Dockerized via `docker-compose` for reproducible deployments.
 
@@ -115,4 +115,4 @@ Moving forward, the codebase adheres to the following human-centric design princ
 1. **Self-Documenting Functions:** Complex endpoints (like `upload_confirm`) are broken down into logical, numbered comments (`# 1. Ensure course exists`, `# 2. Process records`) mapping directly to business logic.
 2. **Explicit Variable Naming:** We avoid ambiguous abbreviations. (e.g., `uploadCourseInfo` instead of `ucInfo`).
 3. **Defensive Programming:** Extensive `try/except` blocks wrap critical backend loops, ensuring the system never crashes ungracefully and always returns clear JSON error messages.
-4. **Decoupled Business Logic:** The frontend (`App.jsx`) is strictly responsible for presentation, validation visualization, and state management. The backend (`main.py`) acts as the single source of truth for business logic and data persistence.
+4. **Decoupled Business Logic & Component Modularity:** The frontend is strictly decoupled into smaller, purpose-driven React components (`AnalysisHub`, `CoursesAdmin`, `BatchUploadWizard`) with centralized state managed in `App.jsx`. The backend `main.py` acts merely as an entry point, delegating all domain logic and endpoint routing to specialized modular routers inside the `backend/routers/` directory, adhering strictly to enterprise-grade separation of concerns.

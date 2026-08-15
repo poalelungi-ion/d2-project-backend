@@ -650,7 +650,7 @@ export default function App() {
     studentFormMode, setStudentFormMode, studentForm, setStudentForm, studentFormErrors,
     setStudentFormErrors, editStudentVersion, setEditStudentVersion, searchQuery,
     setSearchQuery, coursesPage, setCoursesPage, viewMode, setViewMode, newCourseId,
-    setNewCourseId, studentColumnDefs,
+    setNewCourseId, studentColumnDefs, courseColumnDefs, studentRosterColumnDefs,
     toggleTheme, fetchData, fetchStudentTranscript, saveGradesToDB, openCourseForm, 
     openStudentForm, validateStudentForm, handleSaveStudent, validateCourseForm, 
     handleSaveCourse, handleUploadSubmit, updateStudentProgram, handleArchiveCourse, 
