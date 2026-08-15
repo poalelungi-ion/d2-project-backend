@@ -21,6 +21,7 @@ import {
   History as HistoryIcon, ExpandMore as ExpandMoreIcon, WarningAmber as WarningAmberIcon
 } from '@mui/icons-material';
 import { TABS, STEPS } from '../../utils/constants';
+import { StudentDetail } from './StudentDetail';
 
 export const StudentsAdmin = (props) => {
   const { 
@@ -48,7 +49,7 @@ export const StudentsAdmin = (props) => {
   } = props;
   
     if (selectedStudent) {
-      return renderStudentDetail();
+      return <StudentDetail {...props} />;
     }
 
     let activeStudents = studentsData;

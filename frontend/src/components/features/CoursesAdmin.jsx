@@ -21,6 +21,7 @@ import {
   History as HistoryIcon, ExpandMore as ExpandMoreIcon, WarningAmber as WarningAmberIcon
 } from '@mui/icons-material';
 import { TABS, STEPS } from '../../utils/constants';
+import { CourseDetail } from './CourseDetail';
 
 export const CoursesAdmin = (props) => {
   const { 
@@ -48,7 +49,7 @@ export const CoursesAdmin = (props) => {
   } = props;
   
     if (selectedCourse) {
-      return renderCourseDetail();
+      return <CourseDetail {...props} />;
     }
 
     let activeCourses = coursesData.filter(c => !c.is_archived);

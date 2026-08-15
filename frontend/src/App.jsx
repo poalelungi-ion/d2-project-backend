@@ -743,10 +743,10 @@ export default function App() {
         <Box component="main" sx={{ flexGrow: 1, p: 4, pt: 10, overflowY: 'auto' }}>
           
           
-          {activeTab === 'Teacher Dashboard' && renderDashboard()}
-          {activeTab === 'Batch Data Upload' && renderUploadForm()}
-          {activeTab === 'Analysis Hub' && renderCourses()}
-          {activeTab === 'Student LSF Roster' && renderStudents()}
+          {activeTab === 'Teacher Dashboard' && <AnalysisHub {...appState} />}
+          {activeTab === 'Batch Data Upload' && <BatchUploadWizard {...appState} />}
+          {activeTab === 'Analysis Hub' && <CoursesAdmin {...appState} />}
+          {activeTab === 'Student LSF Roster' && <StudentsAdmin {...appState} />}
         </Box>
       </Box>
       
