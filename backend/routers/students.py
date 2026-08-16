@@ -1,10 +1,12 @@
-from fastapi import APIRouter, Depends, HTTPException, File, UploadFile, Form
-from sqlalchemy.orm import Session
-from database import get_db
-import models, schemas
-import pandas as pd
 import io
-from fastapi import Header
+
+import models
+import pandas as pd
+import schemas
+from database import get_db
+from fastapi import APIRouter, Depends, File, Form, Header, HTTPException, UploadFile
+from sqlalchemy.orm import Session
+
 
 def verify_token(authorization: str = Header(None)):
     if authorization != "Bearer sse-staff-token":
@@ -89,7 +91,7 @@ def get_student_details(student_id: int, db: Session = Depends(get_db)):
 
 
 @router.post("/api/students/{student_id}/grades")
-def add_student_grade(student_id: int, request: AddGradeRequest, db: Session = Depends(get_db)):
+def add_student_grade(student_id: int, request: schemas.AddGradeRequest, db: Session = Depends(get_db)):
     student = db.query(models.Student).filter(models.Student.student_id == student_id).first()
     if not student:
         raise HTTPException(status_code=404, detail="Student not found")
@@ -123,7 +125,7 @@ def add_student_grade(student_id: int, request: AddGradeRequest, db: Session = D
 
 
 @router.put("/api/students/{student_id}/status")
-def update_student_status(student_id: int, update: StudentStatusUpdate, db: Session = Depends(get_db)):
+def update_student_status(student_id: int, update: schemas.StudentStatusUpdate, db: Session = Depends(get_db)):
     s = db.query(models.Student).filter(models.Student.student_id == student_id).first()
     if not s:
         raise HTTPException(status_code=404, detail="Student not found")

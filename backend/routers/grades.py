@@ -1,10 +1,12 @@
 from fastapi import APIRouter, Depends, HTTPException, File, UploadFile, Form
 from sqlalchemy.orm import Session
+from sqlalchemy.orm.exc import StaleDataError
 from database import get_db
 import models, schemas
 import pandas as pd
 import io
 from fastapi import Header
+from typing import List
 
 def verify_token(authorization: str = Header(None)):
     if authorization != "Bearer sse-staff-token":
@@ -40,7 +42,7 @@ def get_grades(db: Session = Depends(get_db)):
 
 
 @router.post("/api/grades/")
-def update_grades(updates: List[GradeUpdate], db: Session = Depends(get_db)):
+def update_grades(updates: List[schemas.GradeUpdate], db: Session = Depends(get_db)):
     for u in updates:
         if not (1.0 <= u.grade <= 5.0):
             raise HTTPException(status_code=400, detail="Grade must be between 1.0 and 5.0")

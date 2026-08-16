@@ -1,5 +1,6 @@
 from fastapi import APIRouter, Depends, HTTPException, File, UploadFile, Form
 from sqlalchemy.orm import Session
+from sqlalchemy.orm.exc import StaleDataError
 from database import get_db
 import models, schemas
 import pandas as pd
@@ -68,7 +69,7 @@ def get_courses(db: Session = Depends(get_db)):
 
 
 @router.put("/api/courses/{course_id}/archive")
-def update_course_archive(course_id: int, update: CourseArchiveUpdate, db: Session = Depends(get_db)):
+def update_course_archive(course_id: int, update: schemas.CourseArchiveUpdate, db: Session = Depends(get_db)):
     c = db.query(models.Course).filter(models.Course.course_id == course_id).first()
     if not c:
         raise HTTPException(status_code=404, detail="Course not found")

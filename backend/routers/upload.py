@@ -106,7 +106,7 @@ async def upload_file_preview(
 
 
 @router.post("/api/upload/confirm/")
-async def upload_confirm(req: UploadConfirmRequest, db: Session = Depends(get_db)):
+async def upload_confirm(req: schemas.UploadConfirmRequest, db: Session = Depends(get_db)):
     """
     [User Story: Permanent Archive & No Partial Saves]
     Receives the vetted records from the frontend preview grid and saves them permanently.

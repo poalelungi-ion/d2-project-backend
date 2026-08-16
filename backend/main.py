@@ -24,6 +24,7 @@ from typing import List
 import random
 from collections import Counter
 from fastapi import Header
+import schemas
 def verify_token(authorization: str = Header(None)):
     if authorization != "Bearer sse-staff-token":
         raise HTTPException(status_code=401, detail="Unauthorized")
@@ -120,7 +121,7 @@ def read_root():
     return {"message": "Welcome to the SPA Backend API!"}
 
 @app.post("/api/courses/", dependencies=[Depends(verify_token)])
-def create_course(course: CourseCreate, db: Session = Depends(get_db)):
+def create_course(course: schemas.CourseCreate, db: Session = Depends(get_db)):
     if course.course_id:
         existing_id = db.query(models.Course).filter(models.Course.course_id == course.course_id).first()
         if existing_id:
@@ -145,7 +146,7 @@ from typing import Optional
 
 
 @app.put("/api/courses/{course_id}", dependencies=[Depends(verify_token)])
-def update_course(course_id: int, course: CourseUpdate, db: Session = Depends(get_db)):
+def update_course(course_id: int, course: schemas.CourseUpdate, db: Session = Depends(get_db)):
     c = db.query(models.Course).filter(models.Course.course_id == course_id).first()
     if not c:
         raise HTTPException(status_code=404, detail="Course not found")
@@ -171,7 +172,7 @@ def update_course(course_id: int, course: CourseUpdate, db: Session = Depends(ge
     return {"status": "success", "message": "Course updated successfully"}
 
 @app.post("/api/students/", dependencies=[Depends(verify_token)])
-def create_student(student: StudentCreate, db: Session = Depends(get_db)):
+def create_student(student: schemas.StudentCreate, db: Session = Depends(get_db)):
     """
     [User Story: Profile Creation]
     Creates a new student profile and stores it in the database.
@@ -197,7 +198,7 @@ def create_student(student: StudentCreate, db: Session = Depends(get_db)):
     return {"status": "success", "student_id": new_student.student_id}
 
 @app.put("/api/students/{student_id}", dependencies=[Depends(verify_token)])
-def update_student(student_id: int, update: StudentUpdate, db: Session = Depends(get_db)):
+def update_student(student_id: int, update: schemas.StudentUpdate, db: Session = Depends(get_db)):
     """
     [User Story: Profile Editing]
     Updates an existing student profile.
