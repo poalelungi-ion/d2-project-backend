@@ -1,15 +1,10 @@
 from fastapi import APIRouter, Depends, HTTPException, File, UploadFile, Form
 from sqlalchemy.orm import Session
 from database import get_db
+from dependencies import verify_token
 import models, schemas
 import pandas as pd
 import io
-from fastapi import Header
-
-def verify_token(authorization: str = Header(None)):
-    if authorization != "Bearer sse-staff-token":
-        raise HTTPException(status_code=401, detail="Unauthorized")
-    return True
 
 router = APIRouter()
 

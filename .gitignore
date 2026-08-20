@@ -23,3 +23,9 @@ build/
 # DBs
 *.sqlite3
 *.db
+
+# Local test databases
+test.db
+
+# Virtualenvs
+.venv/

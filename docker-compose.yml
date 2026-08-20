@@ -1,38 +1,40 @@
+# Development stack for the backend alone: PostgreSQL plus the API.
+#
+# The client is a separate repository (d2-project-client) and is not started
+# here. To run the whole system from published images, use the compose file in
+# the sibling docker-compose/ directory instead.
 services:
   db:
     image: postgres:15-alpine
     restart: always
     environment:
-      POSTGRES_USER: spa_user
-      POSTGRES_PASSWORD: spa_password
-      POSTGRES_DB: spa_db
+      POSTGRES_USER: ${POSTGRES_USER:-spa_user}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-spa_password}
+      POSTGRES_DB: ${POSTGRES_DB:-spa_db}
     ports:
       - "5432:5432"
     volumes:
       - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-spa_user} -d ${POSTGRES_DB:-spa_db}"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
 
   backend:
-    build: ./backend
+    build: .
     restart: always
     ports:
       - "8000:8000"
     environment:
-      DATABASE_URL: postgresql://spa_user:spa_password@db/spa_db
-    depends_on:
-      - db
-
-  frontend:
-    build: ./frontend
-    restart: always
-    ports:
-      - "5173:5173"
+      DATABASE_URL: postgresql://${POSTGRES_USER:-spa_user}:${POSTGRES_PASSWORD:-spa_password}@db/${POSTGRES_DB:-spa_db}
+      API_TOKEN: ${API_TOKEN:-sse-staff-token}
+      CORS_ORIGINS: ${CORS_ORIGINS:-*}
     volumes:
-      - ./frontend:/app
-      - /app/node_modules
-    environment:
-      - CHOKIDAR_USEPOLLING=true
+      - .:/app
     depends_on:
-      - backend
+      db:
+        condition: service_healthy
 
 volumes:
   postgres_data:

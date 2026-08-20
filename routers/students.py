@@ -4,14 +4,10 @@ import models
 import pandas as pd
 import schemas
 from database import get_db
-from fastapi import APIRouter, Depends, File, Form, Header, HTTPException, UploadFile
+from dependencies import verify_token
+from fastapi import APIRouter, Depends, File, Form, HTTPException, UploadFile
 from sqlalchemy.orm import Session
-
-
-def verify_token(authorization: str = Header(None)):
-    if authorization != "Bearer sse-staff-token":
-        raise HTTPException(status_code=401, detail="Unauthorized")
-    return True
+from sqlalchemy.orm.exc import StaleDataError
 
 router = APIRouter()
 
@@ -133,3 +129,58 @@ def update_student_status(student_id: int, update: schemas.StudentStatusUpdate, 
     db.commit()
     return {"status": "success"}
 
+
+
+@router.post("/api/students/", dependencies=[Depends(verify_token)])
+def create_student(student: schemas.StudentCreate, db: Session = Depends(get_db)):
+    """
+    [User Story: Profile Creation]
+    Creates a new student profile and stores it in the database.
+    Enforces authorization and performs a 409 Conflict check if the Student ID already exists.
+    """
+    existing = db.query(models.Student).filter(models.Student.student_id == student.student_id).first()
+    if existing:
+        raise HTTPException(status_code=409, detail="Student ID already exists")
+
+    new_student = models.Student(
+        student_id=student.student_id,
+        name=student.name,
+        program=student.program,
+        status=student.status
+    )
+    db.add(new_student)
+    db.commit()
+    return {"status": "success", "student_id": new_student.student_id}
+
+
+@router.put("/api/students/{student_id}", dependencies=[Depends(verify_token)])
+def update_student(student_id: int, update: schemas.StudentUpdate, db: Session = Depends(get_db)):
+    """
+    [User Story: Profile Editing]
+    Updates an existing student profile.
+    Validates the student exists and enforces optimistic locking (version check).
+    Includes conflict handling if a modified Student ID collides with an existing one.
+    """
+    student = db.query(models.Student).filter(models.Student.student_id == student_id).first()
+    if not student:
+        raise HTTPException(status_code=404, detail="Student not found")
+    if student.version != update.version:
+        raise HTTPException(status_code=409, detail="Data modified by another user. Please refresh.")
+
+    if update.new_student_id and update.new_student_id != student_id:
+        existing = db.query(models.Student).filter(models.Student.student_id == update.new_student_id).first()
+        if existing:
+            raise HTTPException(status_code=409, detail="Student ID already exists")
+        student.student_id = update.new_student_id
+
+    student.program = update.program
+    student.name = update.name
+    student.status = update.status
+
+    try:
+        db.commit()
+    except StaleDataError:
+        db.rollback()
+        raise HTTPException(status_code=409, detail="Data modified by another user. Please refresh.")
+
+    return {"status": "success"}

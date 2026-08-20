@@ -7,5 +7,3 @@ python-multipart==0.0.6
 pydantic==2.5.2
 openpyxl==3.1.2
 odfpy==1.4.1
-pytest
-httpx

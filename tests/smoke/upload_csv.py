@@ -1,8 +1,18 @@
-import requests
+"""
+Manual smoke check for POST /api/upload/ with a multipart CSV.
+
+Not a pytest module -- it performs a real HTTP request against a running
+backend and needs `requests` installed. Run it directly:
+    python tests/smoke/upload_csv.py
+"""
 import io
 import json
+import os
 
-url = 'http://localhost:8000/api/upload/'
+import requests
+
+BASE_URL = os.getenv("SMOKE_BASE_URL", "http://localhost:8000")
+url = f'{BASE_URL}/api/upload/'
 
 csv_data = """Matrikelnr,Name,Studiengang,Fachsemester,Note
 123456,Smith, John,B.Sc. CS,3,2.0

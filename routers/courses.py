@@ -2,15 +2,10 @@ from fastapi import APIRouter, Depends, HTTPException, File, UploadFile, Form
 from sqlalchemy.orm import Session
 from sqlalchemy.orm.exc import StaleDataError
 from database import get_db
+from dependencies import verify_token
 import models, schemas
 import pandas as pd
 import io
-from fastapi import Header
-
-def verify_token(authorization: str = Header(None)):
-    if authorization != "Bearer sse-staff-token":
-        raise HTTPException(status_code=401, detail="Unauthorized")
-    return True
 
 router = APIRouter()
 
@@ -85,3 +80,61 @@ def update_course_archive(course_id: int, update: schemas.CourseArchiveUpdate, d
 
 
 
+
+
+@router.post("/api/courses/", dependencies=[Depends(verify_token)])
+def create_course(course: schemas.CourseCreate, db: Session = Depends(get_db)):
+    """
+    Creates a course, rejecting a duplicate course ID or course name with 409.
+    When no ID is supplied one is derived from the course name.
+    """
+    if course.course_id:
+        existing_id = db.query(models.Course).filter(models.Course.course_id == course.course_id).first()
+        if existing_id:
+            raise HTTPException(status_code=409, detail="Course ID already exists")
+
+    existing = db.query(models.Course).filter(models.Course.course_name == course.course_name).first()
+    if existing:
+        raise HTTPException(status_code=409, detail="Course name already exists")
+
+    new_course = models.Course(
+        course_id=course.course_id if course.course_id else abs(hash(course.course_name)) % (10 ** 8),
+        course_name=course.course_name,
+        semester=course.semester,
+        study_program=course.study_program,
+        professor=course.professor
+    )
+    db.add(new_course)
+    db.commit()
+    return {"status": "success", "course_id": new_course.course_id, "course_name": new_course.course_name}
+
+
+@router.put("/api/courses/{course_id}", dependencies=[Depends(verify_token)])
+def update_course(course_id: int, course: schemas.CourseUpdate, db: Session = Depends(get_db)):
+    """
+    Updates a course under optimistic locking. Rejects a stale version with 409,
+    and a renamed course ID that collides with an existing one.
+    """
+    c = db.query(models.Course).filter(models.Course.course_id == course_id).first()
+    if not c:
+        raise HTTPException(status_code=404, detail="Course not found")
+    if c.version != course.version:
+        raise HTTPException(status_code=409, detail="Data modified by another user. Please refresh.")
+
+    if course.new_course_id and course.new_course_id != course_id:
+        existing_id = db.query(models.Course).filter(models.Course.course_id == course.new_course_id).first()
+        if existing_id:
+            raise HTTPException(status_code=409, detail="Course ID already exists")
+        c.course_id = course.new_course_id
+
+    c.course_name = course.course_name
+    c.semester = course.semester
+    c.study_program = course.study_program
+    c.professor = course.professor
+
+    try:
+        db.commit()
+    except StaleDataError:
+        db.rollback()
+        raise HTTPException(status_code=409, detail="Data modified by another user. Please refresh.")
+    return {"status": "success", "message": "Course updated successfully"}

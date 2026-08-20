@@ -1,5 +1,14 @@
-import urllib.request
+"""
+Manual smoke check for POST /api/upload/confirm/.
+
+Not a pytest module -- it performs a real HTTP request against a running
+backend. Run it directly:  python tests/smoke/upload_confirm.py
+"""
 import json
+import os
+import urllib.request
+
+BASE_URL = os.getenv("SMOKE_BASE_URL", "http://localhost:8000")
 
 payload = {
     "course": "TEST101",
@@ -20,7 +29,7 @@ payload = {
 }
 
 req = urllib.request.Request(
-    'http://localhost:8000/api/upload/confirm/',
+    f'{BASE_URL}/api/upload/confirm/',
     data=json.dumps(payload).encode('utf-8'),
     headers={'Content-Type': 'application/json'}
 )

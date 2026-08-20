@@ -1,118 +1,108 @@
-# SPA System Documentation & Traceability Matrix
+# d2-project-backend
 
-This document serves as the comprehensive guide mapping our agile User Stories and Requirements directly to the underlying architecture and source code. Our code philosophy prioritizes extreme readability, atomic transactions, and direct traceability to product requirements.
+FastAPI service behind the Study Progress Analysis (SPA) system. It ingests
+exam data files, stores them in PostgreSQL and serves the analytics the client
+renders.
 
-## 1. System Architecture Overview
+The React client lives in a separate repository,
+[`d2-project-client`](https://gitlab.gwdg.de/sudarshan.bashyal/d2-project-client).
+The two communicate only over this HTTP API.
 
-The system follows a modern decoupled architecture:
-* **Frontend Layer**: React.js SPA utilizing Material-UI (MUI) for responsive design and `AgGridReact` for enterprise-grade data handling. The UI is strictly decoupled into modular feature components (e.g., `AnalysisHub.jsx`, `CoursesAdmin.jsx`, `StudentsAdmin.jsx`) inside `frontend/src/components/features/`.
-* **Backend Layer**: FastAPI (Python) providing highly concurrent REST endpoints. The API is completely modularized using `APIRouter`, with endpoints cleanly separated into `courses.py`, `students.py`, `upload.py`, etc., inside `backend/routers/`. Data validation is handled via strict Pydantic schemas, and SQLAlchemy handles the ORM.
-* **Database Layer**: PostgreSQL database managing relational integrity.
-* **Infrastructure**: Dockerized via `docker-compose` for reproducible deployments.
+## System architecture
 
----
+| Layer | Technology | Repository |
+| :--- | :--- | :--- |
+| Client | React SPA, Material-UI, AG Grid, Recharts | `d2-project-client` |
+| API | FastAPI, Pydantic, SQLAlchemy | `d2-project-backend` (this one) |
+| Database | PostgreSQL 15 | provisioned by compose |
+| Orchestration | Docker Compose over the published images | `docker-compose/` |
 
-## 2. Setup and Execution (Docker)
+## Layout
 
-The easiest way to run the application is using Docker Compose.
-
-### Prerequisites
-* Docker and Docker Compose installed.
-* Ports `8000`, `5173`, and `5432` available on your local machine.
-
-### Starting the Application
-From the root directory of the project, run:
-```bash
-docker-compose up --build -d
+```
+main.py            app creation, CORS, router mounting, startup seeding
+config.py          every environment variable the service reads
+dependencies.py    shared FastAPI dependencies (bearer-token auth)
+database.py        SQLAlchemy engine, session factory, get_db dependency
+models.py          ORM models
+schemas.py         Pydantic request/response schemas
+seed.py            demonstration data for an empty database
+routers/           endpoints grouped by resource
+  students.py      roster, profiles, transcripts, status
+  courses.py       catalogue, creation, editing, archiving
+  grades.py        exam results
+  upload.py        CSV/Excel ingestion (preview and confirm)
+  stats.py         dashboard KPIs
+tests/             pytest suite; tests/smoke/ holds manual scripts
+docs/              traceability matrix
 ```
 
-* **Frontend:** Accessible at `http://localhost:5173`
-* **Backend API Docs (Swagger):** Accessible at `http://localhost:8000/docs`
+## Running it
 
-To view logs:
+### With Docker (PostgreSQL included)
+
 ```bash
-docker-compose logs -f
+docker compose up --build
 ```
 
-To stop the application:
+The API is then on `http://localhost:8000`, with interactive documentation at
+`http://localhost:8000/docs`.
+
+This compose file starts the database and the API only. To run the whole
+system, including the client, use the compose file in the sibling
+`docker-compose/` directory, which pulls both published images.
+
+### Without Docker
+
+Requires a reachable PostgreSQL instance, or set `DATABASE_URL` to a SQLite
+path for a quick look.
+
 ```bash
-docker-compose down
+python -m venv .venv && source .venv/bin/activate
+pip install -r requirements.txt
+uvicorn main:app --reload
 ```
 
----
+## Configuration
 
-## 3. Traceability Matrix: User Stories -> Code
+All settings are read in `config.py` and every one has a working default.
+Copy `.env.example` to `.env` to override them.
 
-We ensure strict traceability between your product User Stories, Acceptance Criteria, and the exact lines of code that fulfill them.
+| Variable | Default | Purpose |
+| :--- | :--- | :--- |
+| `DATABASE_URL` | `postgresql://spa_user:spa_password@db/spa_db` | SQLAlchemy connection URL |
+| `API_TOKEN` | `sse-staff-token` | Bearer token required on mutating endpoints |
+| `CORS_ORIGINS` | `*` | Comma-separated allow-list |
+| `SEED_ON_STARTUP` | `true` | Seed demonstration data into an empty database |
 
-### User Story 1: File Upload & Format Support
-> **Story:** "As a lecturer, I want to upload an exam data file (.xlsx, .csv, .tsv, .ods) so its contents can be processed."
+`API_TOKEN` must match the client's `VITE_API_TOKEN`.
 
-| Requirement / Acceptance Criteria | Code Implementation Trace |
-| :--- | :--- |
-| **AC1:** Successful upload & parsing of various formats | **Backend:** [`backend/main.py`](file:///C:/Users/ionut/Desktop/Project/SPA_System/backend/main.py). The `/api/upload/preview/` endpoint dynamically loads files into memory using `pandas.read_excel()` (with the `odfpy` engine for `.ods`) or `pandas.read_csv()` based on the file extension. |
-| **AC2:** Handle unreadable/failed uploads with feedback | **Frontend:** [`frontend/src/App.jsx`](file:///C:/Users/ionut/Desktop/Project/SPA_System/frontend/src/App.jsx). The `handleUploadSubmit` function catches HTTP 400/500 errors and triggers a clear, red MUI Toast notification (e.g., "Error: Unsupported file format"). |
+## Tests
 
-### User Story 2: Data Validation & Incomplete Records
-> **Story:** "As a lecturer, I want each imported record to be checked for required fields so that incomplete records are visible before archive entry."
+```bash
+pip install -r requirements.txt -r requirements-dev.txt
+pytest
+```
 
-| Requirement / Acceptance Criteria | Code Implementation Trace |
-| :--- | :--- |
-| **Validation Engine:** Check Matrikelnummer, Name, Program, Semester | **Backend:** `/api/upload/preview/` parses raw rows and runs them through a strict dictionary mapping. It compiles a list of missing keys (e.g., `if not str(row.get('first_name')).strip(): missing.append('First Name')`). |
-| **AC1:** Complete records are accepted | **Backend & Frontend:** Rows with `len(missing) == 0` receive an `is_valid = True` boolean. The UI renders these with a standard background. |
-| **AC2:** Missing fields are explicitly flagged & named | **Frontend:** The `AgGridReact` table uses `getRowStyle` to apply a warning background to `is_valid == false` rows. A dedicated cellRenderer outputs the exact missing fields: `<span style={{color: '#d32f2f'}}>Missing: {params.value.join(', ')}</span>`. |
+`tests/conftest.py` points the suite at SQLite and disables seeding, so no
+PostgreSQL instance is needed.
 
-### User Story 3: Interactive Preview & Edge Cases
-> **Story:** "As a lecturer, I want to preview imported records in an interactive table before saving, to identify and review issues."
+`tests/smoke/` holds manual scripts that issue real HTTP requests against a
+running server. They are intentionally not named `test_*.py` so pytest does not
+execute them during collection; see `tests/smoke/README.md`.
 
-| Requirement / Acceptance Criteria | Code Implementation Trace |
-| :--- | :--- |
-| **AC1:** Data presented in an interactive table | **Frontend:** Step 4 implements `AgGridReact`. All columns have `editable: true` enabled, allowing immediate inline correction of typos. |
-| **AC3:** Handle "Approved absence" edge cases ("na"/"ta") | **Frontend:** The grid's `onGridReady` hook explicitly searches for `['na', 'ta', 'ne']` grades and automatically deselects them. The `onRowSelected` hook intercepts intentional manual checks by the teacher and instantly overrides the cell value to `5.0`. |
-| **AC4:** Post-Import Confirmation Screen | **Frontend:** After the `POST /confirm/` promise resolves successfully, React state advances to `setActiveStep(4)`, rendering the Success Modal and a global success Toast. |
+## Authentication
 
-### User Story 4: Permanent Archive & No Partial Saves
-> **Story:** "As a lecturer, I want to save a reviewed import permanently. No partial saves on failure."
+Mutating endpoints depend on `verify_token` from `dependencies.py`, which
+requires the header:
 
-| Requirement / Acceptance Criteria | Code Implementation Trace |
-| :--- | :--- |
-| **AC1:** Successful save permanently stores data | **Backend:** The `upload_confirm()` function maps the frontend JSON payload directly into `models.ExamResult`, `models.Student`, and `models.Course` SQLAlchemy objects. |
-| **AC2:** No partial saves (Atomic Transactions) | **Backend:** The processing loop relies strictly on `db.flush()` to prepare rows. A single `db.commit()` is called at the very end of the function. If an exception triggers, a `db.rollback()` executes, guaranteeing ACID compliance and zero partial data corruption. |
+```
+Authorization: Bearer <API_TOKEN>
+```
 
+Read endpoints are open.
 
-### User Story 5: Student Profile Creation & Editing
-> **Story:** "As a lecturer, I want to create new student profiles and edit existing ones so that their academic records and information remain accurate and up to date."
+## Documentation
 
-| Requirement / Acceptance Criteria | Code Implementation Trace |
-| :--- | :--- |
-| **AC1:** Unified Form UI & Validation (First Name, Last Name, ID, Program) | **Frontend:** `App.jsx` uses a single `Dialog` component triggered by `openStudentForm()`. It strictly enforces validation in `validateStudentForm()` and explicitly splits standard 'Name' into 'First Name' and 'Last Name' in the UI. |
-| **AC2:** Profile Creation (POST) | **Backend & Frontend:** `handleSaveStudent()` fires a POST to `/api/students/` when `studentFormMode === 'create'`. Upon success, triggers the exact `"Student profile created"` Toast and invokes `fetchData()`. |
-| **AC3:** Profile Editing (PUT/PATCH) | **Backend & Frontend:** The edit pencil pre-populates the form. `handleSaveStudent()` fires a PUT to `/api/students/{id}`. Triggers `"Student profile updated"` Toast and invokes `fetchData()`. |
-| **AC4:** Backend Processing, Token Auth & 409 Conflict | **Backend:** `main.py` explicitly attaches `Depends(verify_token)` to both `create_student` and `update_student` endpoints. Both endpoints execute a database check on `student_id` and raise an `HTTPException(409)` if it exists, which the UI cleanly catches. |
-
-
-### User Story 6: Visual Analytics Dashboard
-> **Story:** "As a user, I want to view a dashboard with students and all relevant information, historical trends, and comparative grading metrics."
-
-| Requirement / Acceptance Criteria | Code Implementation Trace |
-| :--- | :--- |
-| **AC1:** Longitudinal Trend (Line Chart) | **Frontend:** Implemented using `Recharts LineChart`. Aggregates average grades per semester from `analyticsStudentTranscript` via the `getLongitudinalData()` helper. Triggered when a student is selected in the Analysis Hub. |
-| **AC2:** Comparative Grade Curve (Histogram) | **Frontend:** Implemented using `Recharts BarChart`. Aggregates grades from `selectedCourse.marks` via `getGradeDistributionData()`. Highlights the selected student's specific grade using conditional `Cell` filling (orange vs blue). |
-| **AC3:** Grade Distribution (Count) | **Frontend:** Handled inherently by the Histogram in AC2, counting exact frequency per grade bracket. |
-| **AC4:** Pass vs. Fail Breakdown (Donut/Pie Chart) | **Frontend:** Implemented using `Recharts PieChart`. Aggregates pass/fail booleans from `selectedCourse.marks` via the `getPassFailData()` helper. |
-
-
-
----
-
-## 4. Code Standards & Readability Pledges
-
-
-
-
-Moving forward, the codebase adheres to the following human-centric design principles:
-
-1. **Self-Documenting Functions:** Complex endpoints (like `upload_confirm`) are broken down into logical, numbered comments (`# 1. Ensure course exists`, `# 2. Process records`) mapping directly to business logic.
-2. **Explicit Variable Naming:** We avoid ambiguous abbreviations. (e.g., `uploadCourseInfo` instead of `ucInfo`).
-3. **Defensive Programming:** Extensive `try/except` blocks wrap critical backend loops, ensuring the system never crashes ungracefully and always returns clear JSON error messages.
-4. **Decoupled Business Logic & Component Modularity:** The frontend is strictly decoupled into smaller, purpose-driven React components (`AnalysisHub`, `CoursesAdmin`, `BatchUploadWizard`) with centralized state managed in `App.jsx`. The backend `main.py` acts merely as an entry point, delegating all domain logic and endpoint routing to specialized modular routers inside the `backend/routers/` directory, adhering strictly to enterprise-grade separation of concerns.
+`docs/TRACEABILITY.md` maps the User Stories and Acceptance Criteria to the
+code that implements them, across both repositories.
