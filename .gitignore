@@ -29,3 +29,6 @@ test.db
 
 # Virtualenvs
 .venv/
+
+# Pytest
+.pytest_cache/
