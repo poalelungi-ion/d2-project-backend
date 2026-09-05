@@ -1,3 +1,5 @@
+from typing import Optional
+
 from fastapi import APIRouter, Depends, HTTPException, File, UploadFile, Form
 from sqlalchemy.orm import Session
 from database import get_db
@@ -8,9 +10,55 @@ import io
 
 router = APIRouter()
 
+_FILE_EXTENSIONS = ('.xlsx', '.xls', '.csv', '.tsv', '.ods')
+
+
+def _paste_separator(header_line: str) -> Optional[str]:
+    """Pick a delimiter the way a spreadsheet paste usually arrives: tabs, then ;, then ,."""
+    tabs = header_line.count('\t')
+    semis = header_line.count(';')
+    commas = header_line.count(',')
+    if tabs > 0 and tabs >= commas and tabs >= semis:
+        return '\t'
+    if semis > commas:
+        return ';'
+    if commas > 0:
+        return ','
+    return None
+
+
+def _read_paste(text: str) -> pd.DataFrame:
+    """Parse copied cells (Excel/Sheets TSV, CSV, or semicolon CSV) into a dataframe."""
+    stripped = text.strip().lstrip('\ufeff')
+    lines = [line for line in stripped.splitlines() if line.strip()]
+    if not lines:
+        raise HTTPException(status_code=400, detail="Pasted data is empty.")
+    sep = _paste_separator(lines[0])
+    if sep is None:
+        raise HTTPException(
+            status_code=400,
+            detail="Pasted data is not tabular. Copy cells from a spreadsheet or paste CSV.",
+        )
+    df = pd.read_csv(io.StringIO(stripped), sep=sep)
+    if df.empty:
+        raise HTTPException(status_code=400, detail="Pasted data has no data rows.")
+    return df
+
+
+def _read_file(filename: str, contents: bytes) -> pd.DataFrame:
+    if filename.endswith('.csv'):
+        return pd.read_csv(io.BytesIO(contents))
+    if filename.endswith('.tsv'):
+        return pd.read_csv(io.BytesIO(contents), sep='\t')
+    if filename.endswith('.ods'):
+        return pd.read_excel(io.BytesIO(contents), engine='odf')
+    return pd.read_excel(io.BytesIO(contents))
+
+
 @router.post("/api/upload/preview/")
 async def upload_file_preview(
-    file: UploadFile = File(...),
+    file: Optional[UploadFile] = File(None),
+    paste: Optional[str] = Form(None),
     course: str = Form(None),
     courseName: str = Form(None),
     ects: str = Form(None),
@@ -20,22 +68,24 @@ async def upload_file_preview(
     db: Session = Depends(get_db)
 ):
     import json
-    import math
-    if not file.filename.endswith(('.xlsx', '.xls', '.csv', '.tsv', '.ods')):
-        raise HTTPException(status_code=400, detail="Invalid file type. Please upload an Excel, CSV, TSV, or ODS file.")
-    
-    preview_data = []
+    source_label = "file"
     try:
-        contents = await file.read()
-        if file.filename.endswith('.csv'):
-            df = pd.read_csv(io.BytesIO(contents))
-        elif file.filename.endswith('.tsv'):
-            df = pd.read_csv(io.BytesIO(contents), sep='\t')
-        elif file.filename.endswith('.ods'):
-            df = pd.read_excel(io.BytesIO(contents), engine='odf')
+        if file is not None and file.filename:
+            if not file.filename.endswith(_FILE_EXTENSIONS):
+                raise HTTPException(
+                    status_code=400,
+                    detail="Invalid file type. Please upload an Excel, CSV, TSV, or ODS file.",
+                )
+            df = _read_file(file.filename, await file.read())
+        elif paste is not None and paste.strip():
+            source_label = "pasted data"
+            df = _read_paste(paste)
         else:
-            df = pd.read_excel(io.BytesIO(contents))
-            
+            raise HTTPException(
+                status_code=400,
+                detail="Provide a spreadsheet file or paste tabular data.",
+            )
+
         column_mapping = {}
         if mapping:
             try:
@@ -43,7 +93,7 @@ async def upload_file_preview(
                 df = df.rename(columns=column_mapping)
             except Exception as e:
                 print("Mapping parsing error", e)
-                
+
         if nameSplitRule and 'name' in df.columns:
             if nameSplitRule == 'Last, First':
                 split_names = df['name'].str.split(',', n=1, expand=True)
@@ -56,7 +106,7 @@ async def upload_file_preview(
                     df['first_name'] = split_names[0].str.strip()
                     df['last_name'] = split_names[1].str.strip()
 
-        # Build preview data
+        preview_data = []
         for _, row in df.iterrows():
             record = {
                 "student_id": str(row.get('student_id', '')),
@@ -67,13 +117,11 @@ async def upload_file_preview(
                 "semester": str(row.get('semester', semester or '')),
                 "grade": str(row.get('grade', ''))
             }
-            
-            # Clean up NaNs
+
             for k in record:
                 if record[k].lower() == 'nan':
                     record[k] = ''
 
-            # Check required fields
             missing = []
             if not record['student_id']:
                 missing.append('Matrikelnummer')
@@ -88,14 +136,16 @@ async def upload_file_preview(
 
             record['missing_fields'] = missing
             record['is_valid'] = len(missing) == 0
-            
             preview_data.append(record)
 
         return {"status": "success", "preview_data": preview_data}
+    except HTTPException:
+        raise
     except Exception as e:
         import traceback
         traceback.print_exc()
-        raise HTTPException(status_code=500, detail=f"Could not parse file: {str(e)}")
+        status = 400 if source_label == "pasted data" else 500
+        raise HTTPException(status_code=status, detail=f"Could not parse {source_label}: {str(e)}")
 
 
 
