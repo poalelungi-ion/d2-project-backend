@@ -38,6 +38,108 @@ def test_get_courses_empty():
     assert response.status_code == 200
     assert response.json() == []
 
+PASTE_MAPPING = (
+    '{"Matrikelnr": "student_id", "Name": "name", "Program": "program", "Grade": "grade"}'
+)
+
+
+def test_upload_preview_paste_tsv():
+    paste = (
+        "Matrikelnr\tName\tProgram\tSemester\tGrade\n"
+        "12345\tSchneider, Lena\tSE Master\t3\t1.7\n"
+    )
+    response = client.post(
+        "/api/upload/preview/",
+        data={
+            "paste": paste,
+            "course": "TEST101",
+            "courseName": "Test Course",
+            "ects": "6",
+            "semester": "WISE_25",
+            "mapping": PASTE_MAPPING,
+            "nameSplitRule": "Last, First",
+        },
+    )
+    assert response.status_code == 200
+    rows = response.json()["preview_data"]
+    assert len(rows) == 1
+    assert rows[0]["is_valid"] is True
+    assert rows[0]["student_id"] == "12345"
+    assert rows[0]["first_name"] == "Lena"
+    assert rows[0]["last_name"] == "Schneider"
+    assert rows[0]["grade"] == "1.7"
+
+
+def test_upload_preview_paste_csv():
+    paste = "Matrikelnr,Name,Program,Semester,Grade\n8888,Ada Lovelace,CS,1,1.0\n"
+    response = client.post(
+        "/api/upload/preview/",
+        data={
+            "paste": paste,
+            "semester": "WISE_25",
+            "mapping": PASTE_MAPPING,
+            "nameSplitRule": "First Last",
+        },
+    )
+    assert response.status_code == 200
+    row = response.json()["preview_data"][0]
+    assert row["is_valid"] is True
+    assert row["first_name"] == "Ada"
+    assert row["last_name"] == "Lovelace"
+
+
+def test_upload_preview_unreadable_paste():
+    response = client.post(
+        "/api/upload/preview/",
+        data={"paste": "this is not a table", "semester": "WISE_25"},
+    )
+    assert response.status_code == 400
+    assert "tabular" in response.json()["detail"].lower()
+
+
+def test_upload_preview_empty_source():
+    response = client.post("/api/upload/preview/", data={"semester": "WISE_25"})
+    assert response.status_code == 400
+    assert "paste" in response.json()["detail"].lower()
+
+
+def test_paste_preview_then_confirm():
+    paste = "Matrikelnr\tName\tProgram\tSemester\tGrade\n9999\tValid, User\tCS\t1\t2.0\n"
+    preview = client.post(
+        "/api/upload/preview/",
+        data={
+            "paste": paste,
+            "semester": "WISE_25",
+            "mapping": PASTE_MAPPING,
+            "nameSplitRule": "Last, First",
+        },
+    )
+    assert preview.status_code == 200
+    row = preview.json()["preview_data"][0]
+    confirm = client.post(
+        "/api/upload/confirm/",
+        json={
+            "course": "PASTE101",
+            "courseName": "Paste Course",
+            "ects": "6",
+            "semester": "WISE_25",
+            "records": [
+                {
+                    "student_id": row["student_id"],
+                    "first_name": row["first_name"],
+                    "last_name": row["last_name"],
+                    "name": row["name"],
+                    "program": row["program"],
+                    "semester": row["semester"],
+                    "grade": row["grade"],
+                }
+            ],
+        },
+    )
+    assert confirm.status_code == 200
+    assert "Successfully imported 1 records" in confirm.json()["message"]
+
+
 def test_upload_preview_invalid_grade():
     csv_content = b"Matrikelnr,Name,Program,Semester,Grade\n12345,John Doe,CS,WISE_25,1.0\n"
     files = {"file": ("test.csv", io.BytesIO(csv_content), "text/csv")}
