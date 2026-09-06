@@ -19,11 +19,12 @@ from fastapi.middleware.cors import CORSMiddleware
 
 import config
 import models
-from database import engine
+from database import engine, ensure_schema
 from routers import courses, grades, stats, students, upload
 from seed import seed_db
 
 models.Base.metadata.create_all(bind=engine)
+ensure_schema()
 
 
 @asynccontextmanager

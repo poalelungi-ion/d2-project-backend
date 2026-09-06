@@ -1,12 +1,18 @@
 from pydantic import BaseModel
-from typing import List, Optional
+from typing import List, Literal, Optional
+
+# The sittings a lecturer can tag an upload with. Kept as a Literal so an
+# unrecognised value is rejected at the API boundary rather than reaching the DB.
+AttemptType = Literal["Exam 1", "Exam 2", "Other"]
 
 class ConfirmRecord(BaseModel):
     student_id: str
     first_name: str = ""
     last_name: str = ""
     name: str = ""
-    program: str
+    # Optional: an empty study program is stored as a placeholder rather than
+    # rejected, so a row is never lost over a blank column.
+    program: str = ""
     semester: str
     grade: str
 
@@ -15,6 +21,8 @@ class UploadConfirmRequest(BaseModel):
     courseName: str
     ects: str
     semester: str
+    # Defaulted so callers predating the attempt-type dropdown still import.
+    attemptType: AttemptType = "Other"
     records: list[ConfirmRecord]
 
 class GradeUpdate(BaseModel):

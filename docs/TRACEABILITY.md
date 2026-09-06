@@ -9,7 +9,7 @@ repository owns the file:
 | Prefix | Repository |
 | :--- | :--- |
 | no prefix, e.g. `routers/upload.py` | `d2-project-backend` (this one) |
-| `client:`, e.g. `client:src/App.jsx` | `d2-project-client` |
+| `client:`, e.g. `client:src/App.tsx` | `d2-project-client` |
 
 ---
 
@@ -21,14 +21,14 @@ We ensure strict traceability between your product User Stories, Acceptance Crit
 | Requirement / Acceptance Criteria | Code Implementation Trace |
 | :--- | :--- |
 | **AC1:** Successful upload & parsing of various formats | **Backend:** `routers/upload.py`. The `/api/upload/preview/` endpoint dynamically loads files into memory using `pandas.read_excel()` (with the `odfpy` engine for `.ods`) or `pandas.read_csv()` based on the file extension. |
-| **AC2:** Handle unreadable/failed uploads with feedback | **Frontend:** `client:src/hooks/useAppLogic.jsx`. The `handleUploadSubmit` function catches HTTP 400/500 errors and triggers a clear, red MUI Toast notification (e.g., "Error: Unsupported file format"). |
+| **AC2:** Handle unreadable/failed uploads with feedback | **Frontend:** `client:src/hooks/useAppLogic.tsx`. The `handleUploadSubmit` function catches HTTP 400/500 errors and triggers a clear, red MUI Toast notification (e.g., "Error: Unsupported file format"). |
 
 ### User Story 2: Data Validation & Incomplete Records
 > **Story:** "As a lecturer, I want each imported record to be checked for required fields so that incomplete records are visible before archive entry."
 
 | Requirement / Acceptance Criteria | Code Implementation Trace |
 | :--- | :--- |
-| **Validation Engine:** Check Matrikelnummer, Name, Program, Semester | **Backend:** `/api/upload/preview/` parses raw rows and runs them through a strict dictionary mapping. It compiles a list of missing keys (e.g., `if not str(row.get('first_name')).strip(): missing.append('First Name')`). |
+| **Validation Engine:** Check Matrikelnummer, Name, Semester | **Backend:** `/api/upload/preview/` parses raw rows and runs them through a strict dictionary mapping. It compiles a list of missing keys (e.g., `if not str(row.get('first_name')).strip(): missing.append('First Name')`). Study Program is deliberately **not** in this list -- see User Story 7. |
 | **AC1:** Complete records are accepted | **Backend & Frontend:** Rows with `len(missing) == 0` receive an `is_valid = True` boolean. The UI renders these with a standard background. |
 | **AC2:** Missing fields are explicitly flagged & named | **Frontend:** The `AgGridReact` table uses `getRowStyle` to apply a warning background to `is_valid == false` rows. A dedicated cellRenderer outputs the exact missing fields: `<span style={{color: '#d32f2f'}}>Missing: {params.value.join(', ')}</span>`. |
 
@@ -55,7 +55,7 @@ We ensure strict traceability between your product User Stories, Acceptance Crit
 
 | Requirement / Acceptance Criteria | Code Implementation Trace |
 | :--- | :--- |
-| **AC1:** Unified Form UI & Validation (First Name, Last Name, ID, Program) | **Frontend:** `client:src/components/forms/StudentFormDialog.jsx` renders a single `Dialog`, opened by `openStudentForm()` and validated by `validateStudentForm()` in `client:src/hooks/useAppLogic.jsx`. It explicitly splits a standard 'Name' into 'First Name' and 'Last Name' in the UI. |
+| **AC1:** Unified Form UI & Validation (First Name, Last Name, ID, Program) | **Frontend:** `client:src/components/forms/StudentFormDialog.tsx` renders a single `Dialog`, opened by `openStudentForm()` and validated by `validateStudentForm()` in `client:src/hooks/useAppLogic.tsx`. It explicitly splits a standard 'Name' into 'First Name' and 'Last Name' in the UI. |
 | **AC2:** Profile Creation (POST) | **Backend & Frontend:** `handleSaveStudent()` fires a POST to `/api/students/` when `studentFormMode === 'create'`. Upon success, triggers the exact `"Student profile created"` Toast and invokes `fetchData()`. |
 | **AC3:** Profile Editing (PUT/PATCH) | **Backend & Frontend:** The edit pencil pre-populates the form. `handleSaveStudent()` fires a PUT to `/api/students/{id}`. Triggers `"Student profile updated"` Toast and invokes `fetchData()`. |
 | **AC4:** Backend Processing, Token Auth & 409 Conflict | **Backend:** `routers/students.py` attaches `Depends(verify_token)` to both `create_student` and `update_student` endpoints. Both endpoints execute a database check on `student_id` and raise an `HTTPException(409)` if it exists, which the UI cleanly catches. |
@@ -72,6 +72,17 @@ We ensure strict traceability between your product User Stories, Acceptance Crit
 | **AC4:** Pass vs. Fail Breakdown (Donut/Pie Chart) | **Frontend:** Implemented using `Recharts PieChart`. Aggregates pass/fail booleans from `selectedCourse.marks` via the `getPassFailData()` helper. |
 
 
+### User Story 7: Attempt Type & Graceful Study Program Handling
+> **Story:** "As a Lecturer, I want to categorize my uploads by exam attempt and have the system gracefully handle missing study program data, so that my valid records aren't rejected due to minor missing fields."
+
+| Requirement / Acceptance Criteria | Code Implementation Trace |
+| :--- | :--- |
+| **AC1:** Attempt Type dropdown (Exam 1 / Exam 2 / Other) | **Frontend:** `client:src/components/features/batchUpload/CourseInfoStep.tsx` renders an MUI `Select` over the `ATTEMPT_TYPES` list. The choice lives in wizard state as `UploadCourseInfo.attemptType` (`client:src/types.ts`, defaulted to `'Exam 1'` in `UploadWizardProvider.tsx`) and is sent by `confirmImport()` in `client:src/hooks/useApi.ts`. |
+| **AC2:** Attempt Type saved for every student record in the upload | **Backend:** `models.ExamResult.attempt_type` stores it per result; `upload_confirm` in `routers/upload.py` passes `attempt_type=req.attemptType` when building each `ExamResult`, so one dropdown choice tags the whole batch. `schemas.AttemptType` restricts the value to the three allowed strings (422 otherwise) and defaults to `"Other"` for callers predating the dropdown. |
+| **AC3:** An empty Study Program is not a validation error | **Backend:** the `missing.append('Study Program')` check was removed from `/api/upload/preview/`, so such rows keep `is_valid = True`. **Frontend:** those rows are therefore neither red-flagged by `getRowStyle` nor skipped by the auto-select in `ReviewStep.tsx`, and `MapColumnsStep.tsx` lists Study program as `optional`. |
+| **AC4:** Empty study programs stored as `"Unassigned / Unknown"` | **Backend:** `routers/upload.py` defines `UNASSIGNED_PROGRAM` and applies it twice -- in `/api/upload/preview/`, so the review grid shows exactly what will be saved, and again in `upload_confirm` when creating the `Student`, since the grid is editable and the field can be cleared after preview. |
+| **Visibility:** the saved attempt is readable back | **Backend:** `get_student_details` in `routers/students.py` returns `attempt_type` on each transcript entry. **Frontend:** `transcriptColumns` (`client:src/components/features/columns.tsx`) renders it as the read-only **Exam** column of the Personal Transcript grid, beside the derived **Attempt #** counter. |
+| **Schema evolution** | **Backend:** the project has no migration tool and `create_all` never alters existing tables, so `database.ensure_schema()` adds post-release columns (`exam_results.attempt_type`) to an already-deployed database. It is idempotent and runs from `main.py` on startup. |
 
 ---
 

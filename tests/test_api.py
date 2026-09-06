@@ -222,3 +222,144 @@ def test_database_persistence_simulation():
     assert course_fetched is not None
     assert course_fetched.course_name == "Persisted Course"
     db2.close()
+
+
+def test_upload_preview_missing_program_is_valid():
+    """A blank Studiengang is filled with a placeholder, not flagged as an error."""
+    csv_content = b"Matrikelnr,Name,Program,Semester,Grade\n5555,No Program,,WISE_25,2.3\n"
+    files = {"file": ("no_program.csv", io.BytesIO(csv_content), "text/csv")}
+    data = {
+        "course": "TEST101",
+        "courseName": "Test Course",
+        "ects": "6",
+        "semester": "WISE_25",
+        "mapping": PASTE_MAPPING,
+    }
+    response = client.post("/api/upload/preview/", files=files, data=data)
+    assert response.status_code == 200
+    row = response.json()["preview_data"][0]
+    assert row["program"] == "Unassigned / Unknown"
+    assert "Study Program" not in row["missing_fields"]
+    assert row["is_valid"] is True
+
+
+def test_upload_confirm_stores_attempt_type_and_placeholder_program():
+    payload = {
+        "course": "ATT101",
+        "courseName": "Attempt Course",
+        "ects": "6",
+        "semester": "WISE_25",
+        "attemptType": "Exam 2",
+        "records": [
+            {
+                "student_id": "6001",
+                "first_name": "With",
+                "last_name": "Program",
+                "program": "CS",
+                "semester": "WISE_25",
+                "grade": "2.0",
+            },
+            {
+                "student_id": "6002",
+                "first_name": "Without",
+                "last_name": "Program",
+                "program": "",
+                "semester": "WISE_25",
+                "grade": "3.0",
+            },
+        ],
+    }
+    response = client.post("/api/upload/confirm/", json=payload)
+    assert response.status_code == 200
+
+    db = TestingSessionLocal()
+    try:
+        results = db.query(models.ExamResult).all()
+        assert len(results) == 2
+        # The attempt type applies to every record in the batch.
+        assert all(r.attempt_type == "Exam 2" for r in results)
+
+        blank = db.query(models.Student).filter(models.Student.student_id == 6002).first()
+        assert blank.program == "Unassigned / Unknown"
+        kept = db.query(models.Student).filter(models.Student.student_id == 6001).first()
+        assert kept.program == "CS"
+    finally:
+        db.close()
+
+
+def test_upload_confirm_defaults_attempt_type():
+    """Callers predating the dropdown still import, tagged as "Other"."""
+    payload = {
+        "course": "ATT102",
+        "courseName": "Default Attempt Course",
+        "ects": "6",
+        "semester": "WISE_25",
+        "records": [
+            {
+                "student_id": "6003",
+                "first_name": "Default",
+                "last_name": "Attempt",
+                "program": "CS",
+                "semester": "WISE_25",
+                "grade": "1.7",
+            }
+        ],
+    }
+    assert client.post("/api/upload/confirm/", json=payload).status_code == 200
+
+    db = TestingSessionLocal()
+    try:
+        result = db.query(models.ExamResult).one()
+        assert result.attempt_type == "Other"
+    finally:
+        db.close()
+
+
+def test_upload_confirm_rejects_unknown_attempt_type():
+    payload = {
+        "course": "ATT103",
+        "courseName": "Bad Attempt Course",
+        "ects": "6",
+        "semester": "WISE_25",
+        "attemptType": "Exam 7",
+        "records": [
+            {
+                "student_id": "6004",
+                "first_name": "Bad",
+                "last_name": "Attempt",
+                "program": "CS",
+                "semester": "WISE_25",
+                "grade": "1.7",
+            }
+        ],
+    }
+    assert client.post("/api/upload/confirm/", json=payload).status_code == 422
+
+
+def test_transcript_exposes_attempt_type():
+    """The sitting reaches the student's personal transcript."""
+    payload = {
+        "course": "TRA101",
+        "courseName": "Transcript Course",
+        "ects": "6",
+        "semester": "WISE_25",
+        "attemptType": "Exam 2",
+        "records": [
+            {
+                "student_id": "7001",
+                "first_name": "Trans",
+                "last_name": "Script",
+                "program": "CS",
+                "semester": "WISE_25",
+                "grade": "2.7",
+            }
+        ],
+    }
+    assert client.post("/api/upload/confirm/", json=payload).status_code == 200
+
+    response = client.get("/api/students/7001")
+    assert response.status_code == 200
+    entry = response.json()["transcript"][0]
+    assert entry["attempt_type"] == "Exam 2"
+    # The derived retry counter is unchanged by the declared sitting.
+    assert entry["attempt"] == 1
