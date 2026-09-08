@@ -346,7 +346,7 @@ def test_transcript_exposes_attempt_type():
         "attemptType": "Exam 2",
         "records": [
             {
-                "student_id": "7001",
+                "student_id": "7301",
                 "first_name": "Trans",
                 "last_name": "Script",
                 "program": "CS",
@@ -357,7 +357,7 @@ def test_transcript_exposes_attempt_type():
     }
     assert client.post("/api/upload/confirm/", json=payload).status_code == 200
 
-    response = client.get("/api/students/7001")
+    response = client.get("/api/students/7301")
     assert response.status_code == 200
     entry = response.json()["transcript"][0]
     assert entry["attempt_type"] == "Exam 2"
