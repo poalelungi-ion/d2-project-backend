@@ -35,6 +35,11 @@ class ExamResult(Base):
     grade = Column(Float, nullable=False)
     passed = Column(Boolean, nullable=False)
 
+    # Which sitting this result came from, chosen once per upload by the lecturer:
+    # "Exam 1", "Exam 2" or "Other". Stored per result so a batch stays identifiable
+    # even when both sittings of a course share one Exam row.
+    attempt_type = Column(String, nullable=False, default="Other", server_default="Other")
+
     # [REQ-CONCURRENCY-01] Version tracking for optimistic locking
     version = Column(Integer, nullable=False, default=1)
 

@@ -12,6 +12,10 @@ router = APIRouter()
 
 _FILE_EXTENSIONS = ('.xlsx', '.xls', '.csv', '.tsv', '.ods')
 
+# A blank study program is a minor gap, not a broken record: it is filled with
+# this placeholder instead of failing validation and losing the row.
+UNASSIGNED_PROGRAM = "Unassigned / Unknown"
+
 
 def _paste_separator(header_line: str) -> Optional[str]:
     """Pick a delimiter the way a spreadsheet paste usually arrives: tabs, then ;, then ,."""
@@ -63,6 +67,7 @@ async def upload_file_preview(
     courseName: str = Form(None),
     ects: str = Form(None),
     semester: str = Form(None),
+    attemptType: str = Form(None),
     mapping: str = Form(None),
     nameSplitRule: str = Form(None),
     db: Session = Depends(get_db)
@@ -122,6 +127,10 @@ async def upload_file_preview(
                 if record[k].lower() == 'nan':
                     record[k] = ''
 
+            # Fill the placeholder here rather than only on save, so the review
+            # grid shows exactly what will be written to the database.
+            record['program'] = record['program'].strip() or UNASSIGNED_PROGRAM
+
             missing = []
             if not record['student_id']:
                 missing.append('Matrikelnummer')
@@ -129,8 +138,6 @@ async def upload_file_preview(
                 missing.append('First Name')
             if not record['last_name'] and not record['name']:
                 missing.append('Last Name')
-            if not record['program']:
-                missing.append('Study Program')
             if not record['semester']:
                 missing.append('Semester')
 
@@ -188,7 +195,10 @@ async def upload_confirm(req: schemas.UploadConfirmRequest, db: Session = Depend
                     elif rec.name:
                         s_name = rec.name
                     
-                    student = models.Student(student_id=sid, name=s_name, program=rec.program)
+                    # The review grid is editable, so re-apply the fallback here for
+                    # a program that was cleared after the preview normalised it.
+                    s_program = rec.program.strip() or UNASSIGNED_PROGRAM
+                    student = models.Student(student_id=sid, name=s_name, program=s_program)
                     db.add(student)
                     db.flush()
                 
@@ -201,7 +211,13 @@ async def upload_confirm(req: schemas.UploadConfirmRequest, db: Session = Depend
                 grade = float(rec.grade)
                 passed = grade <= 4.0
                 
-                res = models.ExamResult(student_id=student.student_id, exam_id=exam.exam_id, grade=grade, passed=passed)
+                res = models.ExamResult(
+                    student_id=student.student_id,
+                    exam_id=exam.exam_id,
+                    grade=grade,
+                    passed=passed,
+                    attempt_type=req.attemptType,
+                )
                 db.add(res)
             except Exception as e:
                 print("Error processing row:", e)

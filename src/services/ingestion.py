@@ -15,6 +15,10 @@ from src.router.dto import UploadConfirmRequest
 
 _FILE_EXTENSIONS = (".xlsx", ".xls", ".csv", ".tsv", ".ods")
 
+# A blank study program is a minor gap, not a broken record: it is filled with
+# this placeholder instead of failing validation and losing the row.
+UNASSIGNED_PROGRAM = "Unassigned / Unknown"
+
 
 def _paste_separator(header_line: str) -> Optional[str]:
     tabs = header_line.count("\t")
@@ -121,6 +125,10 @@ async def preview_upload(
                 if str(record[k]).lower() == "nan":
                     record[k] = ""
 
+            # Fill the placeholder here rather than only on save, so the review
+            # grid shows exactly what will be written to the database.
+            record["program"] = record["program"].strip() or UNASSIGNED_PROGRAM
+
             missing = []
             if not record["student_id"]:
                 missing.append("Matrikelnummer")
@@ -128,8 +136,6 @@ async def preview_upload(
                 missing.append("First Name")
             if not record["last_name"] and not record["name"]:
                 missing.append("Last Name")
-            if not record["program"]:
-                missing.append("Study Program")
             if not record["semester"]:
                 missing.append("Semester")
 
@@ -184,7 +190,10 @@ def confirm_upload(db: Session, req: UploadConfirmRequest):
                 elif rec.name:
                     s_name = rec.name
 
-                student = Student(student_id=sid, name=s_name, program=rec.program)
+                # The review grid is editable, so re-apply the fallback here for
+                # a program that was cleared after the preview normalised it.
+                s_program = rec.program.strip() or UNASSIGNED_PROGRAM
+                student = Student(student_id=sid, name=s_name, program=s_program)
                 db.add(student)
                 db.flush()
 
@@ -200,6 +209,7 @@ def confirm_upload(db: Session, req: UploadConfirmRequest):
                 exam_id=exam.exam_id,
                 grade=grade,
                 passed=passed,
+                attempt_type=req.attemptType,
             )
             db.add(res)
 

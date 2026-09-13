@@ -40,6 +40,53 @@ def get_all_students(db: Session):
     return data
 
 
+def get_student_details(db: Session, student_id: int):
+    """
+    Retrieves one student profile with their full transcript.
+
+    Restored during the merge with the layered-architecture refactor, which
+    dropped it: the client's student detail page and analytics both read it.
+    """
+    student = db.query(Student).filter(Student.student_id == student_id).first()
+    if not student:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Student not found")
+
+    transcript = []
+    course_attempts = {}
+
+    # Sort by exam_id to approximate chronological order
+    sorted_results = sorted(student.results, key=lambda r: r.exam_id)
+
+    for r in sorted_results:
+        c_name = r.exam.course.course_name
+        course_attempts[c_name] = course_attempts.get(c_name, 0) + 1
+        transcript.append({
+            "result_id": r.result_id,
+            "student_id": student.student_id,
+            "name": student.name,
+            "course": c_name,
+            "semester": r.exam.semester,
+            "grade": r.grade,
+            "passed": r.passed,
+            "attempt": course_attempts[c_name],
+            # The sitting the lecturer tagged this batch with, as opposed to
+            # `attempt`, which is this system counting results per course.
+            "attempt_type": r.attempt_type,
+            "version": r.version,
+        })
+
+    transcript.sort(key=lambda x: (x["course"], x["attempt"]))
+
+    return {
+        "student_id": student.student_id,
+        "name": student.name,
+        "program": student.program,
+        "status": student.status,
+        "version": student.version,
+        "transcript": transcript,
+    }
+
+
 def create_student(db: Session, student_dto: StudentCreate):
     """
     Creates a new student profile in a transaction. Rejects duplicate IDs with 409 Conflict.

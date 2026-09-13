@@ -62,8 +62,10 @@ def get_student_details(student_id: int, db: Session = Depends(get_db)):
             "semester": r.exam.semester,
             "grade": r.grade,
             "passed": r.passed,
-            "version": r.version,
             "attempt": course_attempts[c_name],
+            # The sitting the lecturer tagged this batch with, as opposed to
+            # `attempt`, which is this system counting results per course.
+            "attempt_type": r.attempt_type,
             "version": r.version
         })
         

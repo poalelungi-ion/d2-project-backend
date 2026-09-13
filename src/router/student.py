@@ -24,6 +24,12 @@ def get_students(db: Session = Depends(get_db)):
     return student_service.get_all_students(db)
 
 
+@router.get("/api/students/{student_id}", summary="Get one student profile and transcript")
+def get_student_details(student_id: int, db: Session = Depends(get_db)):
+    """Retrieves a single student profile together with their full transcript."""
+    return student_service.get_student_details(db, student_id)
+
+
 @router.post(
     "/api/students/",
     dependencies=[Depends(verify_token)],
