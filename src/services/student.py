@@ -13,6 +13,12 @@ from src.router.dto import (
     StudentStatusUpdate,
     StudentUpdate,
 )
+from src.services.grade_outcome import (
+    counted_attempts,
+    evaluate_grade,
+    mean_grade,
+    result_outcome_fields,
+)
 
 
 def get_all_students(db: Session):
@@ -23,16 +29,16 @@ def get_all_students(db: Session):
     data = []
     for s in students:
         results = s.results
-        total = len(results)
-        passed_results = [r for r in results if r.passed]
+        graded = counted_attempts(results)
+        passed_results = [r for r in graded if r.passed]
         passed = len(passed_results)
-        avg_grade = sum(r.grade for r in passed_results) / passed if passed > 0 else 0
+        avg_grade = mean_grade(passed_results)
         data.append({
             "student_id": s.student_id,
             "name": s.name,
             "program": s.program,
             "status": s.status,
-            "total_exams": total,
+            "total_exams": len(results),
             "passed_exams": passed,
             "avg_grade": round(avg_grade, 2),
             "version": s.version,
@@ -67,7 +73,7 @@ def get_student_details(db: Session, student_id: int):
             "course": c_name,
             "semester": r.exam.semester,
             "grade": r.grade,
-            "passed": r.passed,
+            **result_outcome_fields(r),
             "attempt": course_attempts[c_name],
             # The sitting the lecturer tagged this batch with, as opposed to
             # `attempt`, which is this system counting results per course.
@@ -191,7 +197,7 @@ def add_student_grade(db: Session, student_id: int, request: AddGradeRequest):
             db.add(exam)
             db.flush()
 
-        passed = request.grade <= 4.0
+        verdict = evaluate_grade(request.grade)
         existing = (
             db.query(ExamResult)
             .join(Exam)
@@ -200,16 +206,21 @@ def add_student_grade(db: Session, student_id: int, request: AddGradeRequest):
         )
 
         if existing:
-            if request.grade < existing.grade:
-                existing.grade = request.grade
-                existing.passed = passed
+            # A later numeric grade replaces an excused sitting, or a better mark.
+            if existing.grade is None or (
+                verdict.grade is not None and verdict.grade < existing.grade
+            ):
+                existing.grade = verdict.grade
+                existing.passed = verdict.passed
+                existing.absence_code = verdict.absence_code
                 existing.exam_id = exam.exam_id
         else:
             res = ExamResult(
                 student_id=student.student_id,
                 exam_id=exam.exam_id,
-                grade=request.grade,
-                passed=passed,
+                grade=verdict.grade,
+                passed=verdict.passed,
+                absence_code=verdict.absence_code,
             )
             db.add(res)
 

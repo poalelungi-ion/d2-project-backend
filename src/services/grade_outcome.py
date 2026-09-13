@@ -8,7 +8,7 @@ never interpreted as a result — they are noise from source spreadsheets.
 from __future__ import annotations
 
 from dataclasses import dataclass
-from typing import Optional
+from typing import Iterable, Optional
 
 OUTCOME_PASSED = "passed"
 OUTCOME_FAILED = "failed"
@@ -96,3 +96,24 @@ def is_excused(absence_code: Optional[str]) -> bool:
 
 def is_ignored_column(name: object) -> bool:
     return str(name).strip().lower() in IGNORED_COLUMN_NAMES
+
+
+def counted_attempts(results: Iterable) -> list:
+    """Sittings that count toward pass rate and at-risk — medical notes do not."""
+    return [r for r in results if not is_excused(getattr(r, "absence_code", None))]
+
+
+def mean_grade(results: Iterable) -> float:
+    grades = [r.grade for r in results if getattr(r, "grade", None) is not None]
+    return sum(grades) / len(grades) if grades else 0.0
+
+
+def result_outcome_fields(result) -> dict:
+    """passed stays for compatibility; outcome is the display source of truth."""
+    absence = getattr(result, "absence_code", None)
+    passed = bool(getattr(result, "passed", False))
+    return {
+        "passed": passed,
+        "outcome": outcome_of(absence, passed),
+        "absence_code": absence,
+    }

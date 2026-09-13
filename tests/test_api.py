@@ -446,8 +446,12 @@ def test_confirm_persists_absence_outcomes():
     ne = client.get("/api/students/31021").json()["transcript"][0]
     at = client.get("/api/students/31022").json()["transcript"][0]
     assert ne["passed"] is False
+    assert ne["outcome"] == "failed"
+    assert ne["absence_code"] == "NE"
     assert ne["grade"] == 5.0
     assert at["passed"] is False
+    assert at["outcome"] == "excused"
+    assert at["absence_code"] == "AT"
     assert at["grade"] is None
 
 
@@ -470,3 +474,112 @@ def test_confirm_rejects_passed_text_as_a_grade():
     }
     response = client.post("/api/upload/confirm/", json=payload)
     assert response.status_code == 400
+
+
+def test_batch_grade_update_ignores_client_passed_flag():
+    payload = {
+        "course": "RECALC101",
+        "courseName": "Recalc Course",
+        "ects": "6",
+        "semester": "WISE_25",
+        "records": [
+            {
+                "student_id": "31040",
+                "first_name": "Re",
+                "last_name": "Calc",
+                "program": "CS",
+                "semester": "WISE_25",
+                "grade": "5.0",
+            }
+        ],
+    }
+    assert client.post("/api/upload/confirm/", json=payload).status_code == 200
+    entry = client.get("/api/students/31040").json()["transcript"][0]
+    response = client.post(
+        "/api/grades/",
+        json=[
+            {
+                "result_id": entry["result_id"],
+                "version": entry["version"],
+                "grade": 5.0,
+                "passed": True,
+            }
+        ],
+    )
+    assert response.status_code == 200
+    updated = client.get("/api/students/31040").json()["transcript"][0]
+    assert updated["passed"] is False
+    assert updated["outcome"] == "failed"
+
+
+def test_excused_attempts_are_excluded_from_pass_rate_and_at_risk():
+    payload = {
+        "course": "EXCUSE101",
+        "courseName": "Excuse Course",
+        "ects": "6",
+        "semester": "WISE_25",
+        "records": [
+            {
+                "student_id": "31051",
+                "first_name": "Pass",
+                "last_name": "One",
+                "program": "CS",
+                "semester": "WISE_25",
+                "grade": "2.0",
+            },
+            {
+                "student_id": "31052",
+                "first_name": "Fail",
+                "last_name": "One",
+                "program": "CS",
+                "semester": "WISE_25",
+                "grade": "5.0",
+            },
+            {
+                "student_id": "31053",
+                "first_name": "Med",
+                "last_name": "Note",
+                "program": "CS",
+                "semester": "WISE_25",
+                "grade": "AT",
+            },
+            {
+                "student_id": "31053",
+                "first_name": "Med",
+                "last_name": "Note",
+                "program": "CS",
+                "semester": "WISE_25",
+                "grade": "5.0",
+            },
+            {
+                "student_id": "31054",
+                "first_name": "Two",
+                "last_name": "Fails",
+                "program": "CS",
+                "semester": "WISE_25",
+                "grade": "5.0",
+            },
+            {
+                "student_id": "31054",
+                "first_name": "Two",
+                "last_name": "Fails",
+                "program": "CS",
+                "semester": "WISE_25",
+                "grade": "5.0",
+            },
+        ],
+    }
+    assert client.post("/api/upload/confirm/", json=payload).status_code == 200
+
+    courses = client.get("/api/courses/").json()
+    course = next(c for c in courses if c["course_name"] == "Excuse Course")
+    assert course["total_attempts"] == 6
+    assert course["pass_rate"] == 20.0
+    mark = next(m for m in course["marks"] if m["student_id"] == 31053 and m["outcome"] == "excused")
+    assert mark["grade"] is None
+
+    stats = client.get("/api/stats/").json()
+    at_risk_ids = {row["student_id"] for row in stats["atRisk"]}
+    assert 31053 not in at_risk_ids
+    assert 31054 in at_risk_ids
+

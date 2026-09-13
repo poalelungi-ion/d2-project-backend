@@ -4,6 +4,7 @@ Calculates summary KPIs, identifies at-risk students, and course pass rates.
 """
 from sqlalchemy.orm import Session
 from src.database.models import Course, ExamResult, Student
+from src.services.grade_outcome import counted_attempts, is_excused, mean_grade
 
 
 def get_dashboard_stats(db: Session):
@@ -17,9 +18,10 @@ def get_dashboard_stats(db: Session):
     total_active_students = len(active_students)
     total_archived_courses = sum(1 for c in courses if c.is_archived)
 
-    active_passed = sum(1 for r in active_results if r.passed)
-    active_pass_rate = (active_passed / len(active_results) * 100) if active_results else 0
-    active_avg_grade = (sum(r.grade for r in active_results) / len(active_results)) if active_results else 0
+    graded_active = counted_attempts(active_results)
+    active_passed = sum(1 for r in graded_active if r.passed)
+    active_pass_rate = (active_passed / len(graded_active) * 100) if graded_active else 0
+    active_avg_grade = mean_grade(graded_active)
 
     kpis = {
         "total_active_students": total_active_students,
@@ -30,7 +32,9 @@ def get_dashboard_stats(db: Session):
 
     at_risk = []
     for s in active_students:
-        fails = sum(1 for r in s.results if not r.passed)
+        fails = sum(
+            1 for r in s.results if not r.passed and not is_excused(r.absence_code)
+        )
         if fails >= 2:
             at_risk.append({"name": s.name, "fails": fails, "student_id": s.student_id})
 
@@ -41,13 +45,14 @@ def get_dashboard_stats(db: Session):
         c_results = []
         for e in c.exams:
             c_results.extend([r for r in e.results if r.student and r.student.status == "active"])
-        if len(c_results) > 0:
-            c_pass = sum(1 for r in c_results if r.passed)
-            c_rate = c_pass / len(c_results) * 100
+        graded = counted_attempts(c_results)
+        if len(graded) > 0:
+            c_pass = sum(1 for r in graded if r.passed)
+            c_rate = c_pass / len(graded) * 100
             course_stats.append({
                 "course_name": c.course_name,
                 "pass_rate": round(c_rate, 1),
-                "avg_grade": round(sum(r.grade for r in c_results) / len(c_results), 2),
+                "avg_grade": round(mean_grade(graded), 2),
             })
     course_stats.sort(key=lambda x: x["pass_rate"])
     toughest_courses = course_stats[:5]
