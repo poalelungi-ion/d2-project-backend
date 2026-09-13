@@ -32,8 +32,11 @@ class ExamResult(Base):
     result_id = Column(Integer, primary_key=True, index=True)
     student_id = Column(Integer, ForeignKey("students.student_id"), nullable=False)
     exam_id = Column(Integer, ForeignKey("exams.exam_id"), nullable=False)
-    grade = Column(Float, nullable=False)
+    # Numeric German grade, or null when the sitting is excused (AT).
+    grade = Column(Float, nullable=True)
     passed = Column(Boolean, nullable=False)
+    # Official absence code from the grade cell: NE/EX (fail) or AT (excused).
+    absence_code = Column(String, nullable=True)
 
     # Which sitting this result came from, chosen once per upload by the lecturer:
     # "Exam 1", "Exam 2" or "Other". Stored per result so a batch stays identifiable
@@ -48,7 +51,10 @@ class ExamResult(Base):
     }
 
     __table_args__ = (
-        CheckConstraint("grade >= 1.0 AND grade <= 5.0", name="check_valid_grade"),
+        CheckConstraint(
+            "grade IS NULL OR (grade >= 1.0 AND grade <= 5.0)",
+            name="check_valid_grade",
+        ),
     )
 
     student = relationship("Student", back_populates="results")
