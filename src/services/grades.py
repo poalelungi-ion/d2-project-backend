@@ -9,6 +9,7 @@ from sqlalchemy.orm.exc import StaleDataError
 
 from src.database.models import ExamResult
 from src.router.dto import GradeUpdate
+from src.services.grade_outcome import evaluate_grade, result_outcome_fields
 
 
 def get_all_grades(db: Session):
@@ -22,7 +23,7 @@ def get_all_grades(db: Session):
             "course": r.exam.course.course_name if r.exam and r.exam.course else "Unknown",
             "semester": r.exam.semester if r.exam else "Unknown",
             "grade": r.grade,
-            "passed": r.passed,
+            **result_outcome_fields(r),
             "version": r.version,
         })
     return data
@@ -30,14 +31,14 @@ def get_all_grades(db: Session):
 
 def update_grades_batch(db: Session, updates: List[GradeUpdate]):
     for u in updates:
-        if not (1.0 <= u.grade <= 5.0):
-            raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Grade must be between 1.0 and 5.0")
+        verdict = evaluate_grade(u.grade)
         result = db.query(ExamResult).filter(ExamResult.result_id == u.result_id).first()
         if result:
             if result.version != u.version:
                 raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail="Data modified by another user. Please refresh.")
-            result.grade = u.grade
-            result.passed = u.passed
+            result.grade = verdict.grade
+            result.passed = verdict.passed
+            result.absence_code = verdict.absence_code
 
     try:
         db.commit()

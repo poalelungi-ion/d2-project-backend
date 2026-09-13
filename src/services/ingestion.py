@@ -12,6 +12,11 @@ from sqlalchemy.orm import Session
 
 from src.database.models import Course, Exam, ExamResult, Student
 from src.router.dto import UploadConfirmRequest
+from src.services.grade_outcome import (
+    UnrecognizedGrade,
+    evaluate_grade,
+    is_ignored_column,
+)
 
 _FILE_EXTENSIONS = (".xlsx", ".xls", ".csv", ".tsv", ".ods")
 
@@ -92,10 +97,20 @@ async def preview_upload(
 
         if mapping:
             try:
-                column_mapping = json.loads(mapping)
+                column_mapping = {
+                    source: target
+                    for source, target in json.loads(mapping).items()
+                    if not is_ignored_column(source) and not is_ignored_column(target)
+                }
                 df = df.rename(columns=column_mapping)
             except Exception as e:
                 print("Mapping parsing error:", e)
+
+        # Passed/Failed/Yes/No columns are never a result — drop them even if
+        # they survived mapping under their original spreadsheet header.
+        drop = [col for col in df.columns if is_ignored_column(col)]
+        if drop:
+            df = df.drop(columns=drop)
 
         if nameSplitRule and "name" in df.columns:
             if nameSplitRule == "Last, First":
@@ -138,6 +153,15 @@ async def preview_upload(
                 missing.append("Last Name")
             if not record["semester"]:
                 missing.append("Semester")
+
+            try:
+                verdict = evaluate_grade(record["grade"])
+                record["outcome"] = verdict.outcome
+                record["absence_code"] = verdict.absence_code
+            except UnrecognizedGrade:
+                record["outcome"] = "invalid"
+                record["absence_code"] = None
+                missing.append("Grade")
 
             record["missing_fields"] = missing
             record["is_valid"] = len(missing) == 0
@@ -197,18 +221,20 @@ def confirm_upload(db: Session, req: UploadConfirmRequest):
                 db.add(student)
                 db.flush()
 
-            raw_g = rec.grade.strip().lower()
-            if raw_g in ["ta", "at", "ne", "na", "nan", ""]:
-                raise ValueError(f"Invalid grade {raw_g} sent for import.")
-
-            grade = float(rec.grade)
-            passed = grade <= 4.0
+            try:
+                verdict = evaluate_grade(rec.grade)
+            except UnrecognizedGrade as exc:
+                raise HTTPException(
+                    status_code=status.HTTP_400_BAD_REQUEST,
+                    detail=f"Invalid grade for student {sid}: {exc}",
+                ) from exc
 
             res = ExamResult(
                 student_id=student.student_id,
                 exam_id=exam.exam_id,
-                grade=grade,
-                passed=passed,
+                grade=verdict.grade,
+                passed=verdict.passed,
+                absence_code=verdict.absence_code,
                 attempt_type=req.attemptType,
             )
             db.add(res)

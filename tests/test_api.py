@@ -363,3 +363,223 @@ def test_transcript_exposes_attempt_type():
     assert entry["attempt_type"] == "Exam 2"
     # The derived retry counter is unchanged by the declared sitting.
     assert entry["attempt"] == 1
+
+
+def test_preview_absence_codes_and_ignores_passed_column():
+    paste = (
+        "Matrikelnr\tName\tProgram\tSemester\tGrade\tPassed\n"
+        "31001\tSchneider, Lena\tSE Master\t3\tNE\tYes\n"
+        "31002\tBecker, Leon\tSE Master\t3\tEX\tPassed\n"
+        "31003\tWagner, Sophie\tSE Master\t3\tAT\tNo\n"
+        "31004\tHoffmann, Marie\tSE Master\t3\t1.7\tFailed\n"
+    )
+    response = client.post(
+        "/api/upload/preview/",
+        data={
+            "paste": paste,
+            "semester": "WISE_25",
+            "mapping": PASTE_MAPPING,
+            "nameSplitRule": "Last, First",
+        },
+    )
+    assert response.status_code == 200
+    rows = {row["student_id"]: row for row in response.json()["preview_data"]}
+    assert rows["31001"]["outcome"] == "failed"
+    assert rows["31001"]["absence_code"] == "NE"
+    assert rows["31001"]["is_valid"] is True
+    assert rows["31002"]["outcome"] == "failed"
+    assert rows["31002"]["absence_code"] == "EX"
+    assert rows["31003"]["outcome"] == "excused"
+    assert rows["31003"]["absence_code"] == "AT"
+    # File said Failed; the numeric grade is the only source of truth.
+    assert rows["31004"]["grade"] == "1.7"
+    assert rows["31004"]["outcome"] == "passed"
+    assert rows["31004"]["absence_code"] is None
+    assert "Passed" not in rows["31004"]
+    assert "passed" not in rows["31004"]
+
+
+def test_preview_rejects_passed_text_in_the_grade_cell():
+    paste = "Matrikelnr,Name,Program,Semester,Grade\n31010,Ada Lovelace,CS,1,Passed\n"
+    response = client.post(
+        "/api/upload/preview/",
+        data={
+            "paste": paste,
+            "semester": "WISE_25",
+            "mapping": PASTE_MAPPING,
+            "nameSplitRule": "First Last",
+        },
+    )
+    assert response.status_code == 200
+    row = response.json()["preview_data"][0]
+    assert row["is_valid"] is False
+    assert "Grade" in row["missing_fields"]
+    assert row["outcome"] == "invalid"
+
+
+def test_confirm_persists_absence_outcomes():
+    payload = {
+        "course": "ABSENCE101",
+        "courseName": "Absence Course",
+        "ects": "6",
+        "semester": "WISE_25",
+        "records": [
+            {
+                "student_id": "31021",
+                "first_name": "No",
+                "last_name": "Show",
+                "program": "CS",
+                "semester": "WISE_25",
+                "grade": "NE",
+            },
+            {
+                "student_id": "31022",
+                "first_name": "Med",
+                "last_name": "Note",
+                "program": "CS",
+                "semester": "WISE_25",
+                "grade": "AT",
+            },
+        ],
+    }
+    assert client.post("/api/upload/confirm/", json=payload).status_code == 200
+    ne = client.get("/api/students/31021").json()["transcript"][0]
+    at = client.get("/api/students/31022").json()["transcript"][0]
+    assert ne["passed"] is False
+    assert ne["outcome"] == "failed"
+    assert ne["absence_code"] == "NE"
+    assert ne["grade"] == 5.0
+    assert at["passed"] is False
+    assert at["outcome"] == "excused"
+    assert at["absence_code"] == "AT"
+    assert at["grade"] is None
+
+
+def test_confirm_rejects_passed_text_as_a_grade():
+    payload = {
+        "course": "LABEL101",
+        "courseName": "Label Course",
+        "ects": "6",
+        "semester": "WISE_25",
+        "records": [
+            {
+                "student_id": "31030",
+                "first_name": "Label",
+                "last_name": "Only",
+                "program": "CS",
+                "semester": "WISE_25",
+                "grade": "Passed",
+            }
+        ],
+    }
+    response = client.post("/api/upload/confirm/", json=payload)
+    assert response.status_code == 400
+
+
+def test_batch_grade_update_ignores_client_passed_flag():
+    payload = {
+        "course": "RECALC101",
+        "courseName": "Recalc Course",
+        "ects": "6",
+        "semester": "WISE_25",
+        "records": [
+            {
+                "student_id": "31040",
+                "first_name": "Re",
+                "last_name": "Calc",
+                "program": "CS",
+                "semester": "WISE_25",
+                "grade": "5.0",
+            }
+        ],
+    }
+    assert client.post("/api/upload/confirm/", json=payload).status_code == 200
+    entry = client.get("/api/students/31040").json()["transcript"][0]
+    response = client.post(
+        "/api/grades/",
+        json=[
+            {
+                "result_id": entry["result_id"],
+                "version": entry["version"],
+                "grade": 5.0,
+                "passed": True,
+            }
+        ],
+    )
+    assert response.status_code == 200
+    updated = client.get("/api/students/31040").json()["transcript"][0]
+    assert updated["passed"] is False
+    assert updated["outcome"] == "failed"
+
+
+def test_excused_attempts_are_excluded_from_pass_rate_and_at_risk():
+    payload = {
+        "course": "EXCUSE101",
+        "courseName": "Excuse Course",
+        "ects": "6",
+        "semester": "WISE_25",
+        "records": [
+            {
+                "student_id": "31051",
+                "first_name": "Pass",
+                "last_name": "One",
+                "program": "CS",
+                "semester": "WISE_25",
+                "grade": "2.0",
+            },
+            {
+                "student_id": "31052",
+                "first_name": "Fail",
+                "last_name": "One",
+                "program": "CS",
+                "semester": "WISE_25",
+                "grade": "5.0",
+            },
+            {
+                "student_id": "31053",
+                "first_name": "Med",
+                "last_name": "Note",
+                "program": "CS",
+                "semester": "WISE_25",
+                "grade": "AT",
+            },
+            {
+                "student_id": "31053",
+                "first_name": "Med",
+                "last_name": "Note",
+                "program": "CS",
+                "semester": "WISE_25",
+                "grade": "5.0",
+            },
+            {
+                "student_id": "31054",
+                "first_name": "Two",
+                "last_name": "Fails",
+                "program": "CS",
+                "semester": "WISE_25",
+                "grade": "5.0",
+            },
+            {
+                "student_id": "31054",
+                "first_name": "Two",
+                "last_name": "Fails",
+                "program": "CS",
+                "semester": "WISE_25",
+                "grade": "5.0",
+            },
+        ],
+    }
+    assert client.post("/api/upload/confirm/", json=payload).status_code == 200
+
+    courses = client.get("/api/courses/").json()
+    course = next(c for c in courses if c["course_name"] == "Excuse Course")
+    assert course["total_attempts"] == 6
+    assert course["pass_rate"] == 20.0
+    mark = next(m for m in course["marks"] if m["student_id"] == 31053 and m["outcome"] == "excused")
+    assert mark["grade"] is None
+
+    stats = client.get("/api/stats/").json()
+    at_risk_ids = {row["student_id"] for row in stats["atRisk"]}
+    assert 31053 not in at_risk_ids
+    assert 31054 in at_risk_ids
+

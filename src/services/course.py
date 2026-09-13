@@ -12,6 +12,7 @@ from src.router.dto import (
     CourseCreate,
     CourseUpdate,
 )
+from src.services.grade_outcome import counted_attempts, mean_grade, result_outcome_fields
 
 
 def get_all_courses(db: Session):
@@ -35,14 +36,15 @@ def get_all_courses(db: Session):
                     "program": r.student.program if r.student else "Unknown",
                     "semester": e.semester,
                     "grade": r.grade,
-                    "passed": r.passed,
+                    **result_outcome_fields(r),
                     "version": r.version,
                 })
 
         total = len(results)
-        passed_results = [r for r in results if r.passed]
+        graded = counted_attempts(results)
+        passed_results = [r for r in graded if r.passed]
         passed = len(passed_results)
-        avg_grade = sum(r.grade for r in passed_results) / passed if passed > 0 else 0
+        avg_grade = mean_grade(passed_results)
         latest_semester = sorted(list(semesters))[-1] if semesters else "N/A"
 
         data.append({
@@ -52,7 +54,7 @@ def get_all_courses(db: Session):
             "semester": c.semester if getattr(c, "semester", None) else latest_semester,
             "study_program": getattr(c, "study_program", "Not Assigned"),
             "total_attempts": total,
-            "pass_rate": round((passed / total * 100), 1) if total > 0 else 0,
+            "pass_rate": round((passed / len(graded) * 100), 1) if graded else 0,
             "avg_grade": round(avg_grade, 2),
             "is_archived": c.is_archived,
             "version": c.version,
