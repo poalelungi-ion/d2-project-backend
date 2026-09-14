@@ -36,6 +36,7 @@ def get_all_courses(db: Session):
                     "program": r.student.program if r.student else "Unknown",
                     "semester": e.semester,
                     "grade": r.grade,
+                    "attempt_type": getattr(r, "attempt_type", "Other"),
                     **result_outcome_fields(r),
                     "version": r.version,
                 })
