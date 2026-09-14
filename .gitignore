@@ -32,3 +32,14 @@ test.db
 
 # Pytest
 .pytest_cache/
+
+# Quality reports and coverage
+/report
+# Quality and test reports
+/report
+/gl-code-quality-report.json
+/junit.xml
+/coverage.xml
+/coverage.json
+.coverage
+.ruff_cache/

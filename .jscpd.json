@@ -1,0 +1,21 @@
+{
+    "threshold": 5,
+    "minLines": 5,
+    "minTokens": 60,
+    "mode": "mild",
+    "gitignore": true,
+    "ignore": [
+        "**/.venv/**",
+        "**/venv/**",
+        "**/__pycache__/**",
+        "**/migrations/**",
+        "**/node_modules/**",
+        "**/tests/**",
+        "**/test_*.py",
+        "**/*_test.py"
+    ],
+    "format": ["python"],
+    "reporters": ["console", "codeclimate"],
+    "output": "report",
+    "absolute": false
+}
