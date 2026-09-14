@@ -32,6 +32,8 @@ def get_courses(db: Session = Depends(get_db)):
                     "semester": e.semester,
                     "grade": r.grade,
                     "passed": r.passed,
+                    "absence_code": getattr(r, 'absence_code', None),
+                    "attempt_type": getattr(r, 'attempt_type', 'Other'),
                     "version": r.version
                 })
         
