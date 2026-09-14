@@ -5,6 +5,7 @@ Calculates summary KPIs, identifies at-risk students, and course pass rates.
 from sqlalchemy.orm import Session
 from src.database.models import Course, ExamResult, Student
 from src.services.grade_outcome import counted_attempts, is_excused, mean_grade
+from src.services.semester import semester_sort_key
 
 
 def get_dashboard_stats(db: Session):
@@ -57,8 +58,11 @@ def get_dashboard_stats(db: Session):
     course_stats.sort(key=lambda x: x["pass_rate"])
     toughest_courses = course_stats[:5]
 
-    # Build activity heatmap
-    all_semesters = sorted(list({e.semester for c in courses for e in c.exams if e.semester}))
+    # Build activity heatmap with chronological semester ordering
+    all_semesters = sorted(
+        list({e.semester for c in courses for e in c.exams if e.semester}),
+        key=semester_sort_key,
+    )
     activity_heatmap = []
     for sem in all_semesters:
         distribution = {}
