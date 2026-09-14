@@ -24,6 +24,35 @@ _FILE_EXTENSIONS = (".xlsx", ".xls", ".csv", ".tsv", ".ods")
 # this placeholder instead of failing validation and losing the row.
 UNASSIGNED_PROGRAM = "Unassigned / Unknown"
 
+# The course an import belongs to comes from the Course view the lecturer
+# started the upload in, never from the sheet. A course identifier column is
+# therefore noise: it is dropped before validation, so it can neither be mapped
+# onto a field nor be reported as a problem with the file.
+COURSE_COLUMN_NAMES = frozenset(
+    {
+        "course",
+        "courseid",
+        "coursenumber",
+        "courseno",
+        "coursecode",
+        "kurs",
+        "kursid",
+        "kursnummer",
+        "modulnummer",
+        "veranstaltungsnummer",
+    }
+)
+
+
+def is_course_column(name: object) -> bool:
+    """True for a header naming the course, in English or German, however punctuated."""
+    return "".join(ch for ch in str(name).lower() if ch.isalnum()) in COURSE_COLUMN_NAMES
+
+
+def _is_dropped_column(name: object) -> bool:
+    """Headers the parser never reads: pass/fail labels and course identifiers."""
+    return is_ignored_column(name) or is_course_column(name)
+
 
 def _paste_separator(header_line: str) -> Optional[str]:
     tabs = header_line.count("\t")
@@ -100,15 +129,15 @@ async def preview_upload(
                 column_mapping = {
                     source: target
                     for source, target in json.loads(mapping).items()
-                    if not is_ignored_column(source) and not is_ignored_column(target)
+                    if not _is_dropped_column(source) and not _is_dropped_column(target)
                 }
                 df = df.rename(columns=column_mapping)
             except Exception as e:
                 print("Mapping parsing error:", e)
 
-        # Passed/Failed/Yes/No columns are never a result — drop them even if
-        # they survived mapping under their original spreadsheet header.
-        drop = [col for col in df.columns if is_ignored_column(col)]
+        # Pass/fail labels are never a result and the course is already known —
+        # drop both even if they survived mapping under their original header.
+        drop = [col for col in df.columns if _is_dropped_column(col)]
         if drop:
             df = df.drop(columns=drop)
 
@@ -175,6 +204,33 @@ async def preview_upload(
         raise HTTPException(status_code=status_code, detail=f"Could not parse {source_label}: {str(e)}")
 
 
+def resolve_course(db: Session, req: UploadConfirmRequest) -> Course:
+    """
+    The course this import belongs to.
+
+    An upload started from a Course view carries that view's courseId, so the
+    records attach to exactly that course and nothing has to be inferred from
+    the file or from a typed-in name. Only the standalone wizard, which has no
+    active course, falls back to matching — then creating — a course by name.
+    """
+    if req.courseId is not None:
+        course = db.query(Course).filter(Course.course_id == req.courseId).first()
+        if course is None:
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail=f"Course {req.courseId} not found.",
+            )
+        return course
+
+    c_name = req.courseName if req.courseName else "Unnamed Course"
+    course = db.query(Course).filter(Course.course_name == c_name).first()
+    if course is None:
+        course = Course(course_id=abs(hash(c_name)) % (10**8), course_name=c_name)
+        db.add(course)
+        db.flush()
+    return course
+
+
 def confirm_upload(db: Session, req: UploadConfirmRequest):
     """
     [AC2: Atomic Transactions & No Partial Saves]
@@ -182,14 +238,8 @@ def confirm_upload(db: Session, req: UploadConfirmRequest):
     Guarantees that on any exception, db.rollback() executes and no partial data remains.
     """
     try:
-        # 1. Ensure course exists
-        c_name = req.courseName if req.courseName else "Unnamed Course"
-        course_obj = db.query(Course).filter(Course.course_name == c_name).first()
-        if not course_obj:
-            c_id = abs(hash(c_name)) % (10**8)
-            course_obj = Course(course_id=c_id, course_name=c_name)
-            db.add(course_obj)
-            db.flush()
+        # 1. Resolve the course — the active one when the upload came from a Course view
+        course_obj = resolve_course(db, req)
 
         # 2. Ensure exam exists
         exam = (

@@ -583,3 +583,140 @@ def test_excused_attempts_are_excluded_from_pass_rate_and_at_risk():
     assert 31053 not in at_risk_ids
     assert 31054 in at_risk_ids
 
+
+
+# --- Uploading from inside a Course view -------------------------------------
+# The lecturer starts the import from the course's own tab, so the course is
+# already known: a course column in the file is noise and must never surface as
+# a validation problem.
+
+
+def test_preview_ignores_course_columns_in_the_file():
+    paste = (
+        "Matrikelnr\tName\tProgram\tSemester\tGrade\tcourse_number\tCourse ID\tKursnummer\n"
+        "41001\tSchneider, Lena\tSE Master\t3\t1.7\t9999\t8888\t7777\n"
+    )
+    response = client.post(
+        "/api/upload/preview/",
+        data={
+            "paste": paste,
+            "semester": "WISE_25",
+            "mapping": PASTE_MAPPING,
+            "nameSplitRule": "Last, First",
+        },
+    )
+    assert response.status_code == 200
+    row = response.json()["preview_data"][0]
+
+    # The row parses cleanly: the course columns raise no complaint of any kind.
+    assert row["is_valid"] is True
+    assert row["missing_fields"] == []
+    assert not any("course" in field.lower() for field in row["missing_fields"])
+
+    # And they are gone entirely, rather than carried along as extra fields.
+    for key in ("course_number", "Course ID", "course_id", "Kursnummer", "course"):
+        assert key not in row
+
+
+def test_preview_ignores_a_mapping_that_targets_a_course_column():
+    """A mapping naming a course column is dropped instead of renaming a field onto it."""
+    paste = "Matrikelnr,Name,Program,Semester,Grade,Kursnummer\n41010,Ada Lovelace,CS,1,2.0,4711\n"
+    response = client.post(
+        "/api/upload/preview/",
+        data={
+            "paste": paste,
+            "semester": "WISE_25",
+            "mapping": (
+                '{"Matrikelnr": "student_id", "Name": "name", "Program": "program",'
+                ' "Grade": "grade", "Kursnummer": "course_id"}'
+            ),
+            "nameSplitRule": "First Last",
+        },
+    )
+    assert response.status_code == 200
+    row = response.json()["preview_data"][0]
+    assert row["is_valid"] is True
+    assert row["missing_fields"] == []
+    assert "course_id" not in row
+    assert "Kursnummer" not in row
+
+
+def test_confirm_attaches_records_to_the_active_course_id():
+    """courseId from the Course view wins over the name, so no second course appears."""
+    db = TestingSessionLocal()
+    db.add(models.Course(course_id=3545, course_name="SE Tools Lab"))
+    db.commit()
+    db.close()
+
+    payload = {
+        "courseId": 3545,
+        # Deliberately stale: the id is what decides where the batch lands.
+        "courseName": "Typed Something Else",
+        "ects": "6",
+        "semester": "WISE_25",
+        "attemptType": "Exam 1",
+        "records": [
+            {
+                "student_id": "41020",
+                "first_name": "Lena",
+                "last_name": "Schneider",
+                "program": "SE Master",
+                "semester": "WISE_25",
+                "grade": "1.7",
+            }
+        ],
+    }
+    assert client.post("/api/upload/confirm/", json=payload).status_code == 200
+
+    courses = client.get("/api/courses/").json()
+    assert len(courses) == 1
+    assert courses[0]["course_id"] == 3545
+    assert courses[0]["course_name"] == "SE Tools Lab"
+    assert courses[0]["total_attempts"] == 1
+
+
+def test_confirm_rejects_an_unknown_course_id():
+    payload = {
+        "courseId": 999999,
+        "courseName": "Ghost Course",
+        "ects": "6",
+        "semester": "WISE_25",
+        "records": [
+            {
+                "student_id": "41030",
+                "first_name": "No",
+                "last_name": "Course",
+                "program": "CS",
+                "semester": "WISE_25",
+                "grade": "2.0",
+            }
+        ],
+    }
+    response = client.post("/api/upload/confirm/", json=payload)
+    assert response.status_code == 404
+    assert "999999" in response.json()["detail"]
+    # Nothing was written on the way to the rejection.
+    assert client.get("/api/courses/").json() == []
+
+
+def test_confirm_without_a_course_id_still_matches_by_name():
+    """The standalone wizard has no active course and keeps its old behaviour."""
+    payload = {
+        "course": "3545",
+        "courseName": "Standalone Course",
+        "ects": "6",
+        "semester": "WISE_25",
+        "records": [
+            {
+                "student_id": "41040",
+                "first_name": "Stand",
+                "last_name": "Alone",
+                "program": "CS",
+                "semester": "WISE_25",
+                "grade": "2.0",
+            }
+        ],
+    }
+    assert client.post("/api/upload/confirm/", json=payload).status_code == 200
+    courses = client.get("/api/courses/").json()
+    assert [c["course_name"] for c in courses] == ["Standalone Course"]

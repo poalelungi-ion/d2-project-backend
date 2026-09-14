@@ -84,6 +84,18 @@ We ensure strict traceability between your product User Stories, Acceptance Crit
 | **Visibility:** the saved attempt is readable back | **Backend:** `get_student_details` in `routers/students.py` returns `attempt_type` on each transcript entry. **Frontend:** `transcriptColumns` (`client:src/components/features/columns.tsx`) renders it as the read-only **Exam** column of the Personal Transcript grid, beside the derived **Attempt #** counter. |
 | **Schema evolution** | **Backend:** the project has no migration tool and `create_all` never alters existing tables, so `database.ensure_schema()` adds post-release columns (`exam_results.attempt_type`) to an already-deployed database. It is idempotent and runs from `main.py` on startup. |
 
+### User Story 8: Course-Scoped Exam Data Upload
+> **Story:** "As a Lecturer, I want to initiate exam data uploads directly from within a specific Course tab, so that the system automatically knows which course the data belongs to without me typing it."
+
+| Requirement / Acceptance Criteria | Code Implementation Trace |
+| :--- | :--- |
+| **AC1:** The "Upload Exam Data" button lives inside the Course view | **Frontend:** `client:src/components/features/CourseDetail.tsx` renders it in the course header beside Archive/Restore. It navigates to `ROUTES.upload` carrying `{ courseId, courseName }` as react-router location state. |
+| **AC2:** The active `course_id` is grabbed from the page and attached to the upload | **Frontend:** `courseHandoff()` in `client:src/components/features/batchUpload/BatchUploadWizard.tsx` narrows that state and hands it to `UploadWizardProvider`, which seeds `UploadCourseInfo.courseId` (and, since a course's id is its course number, `courseNumber`). `confirmImport()` in `client:src/hooks/useApi.ts` sends it as `courseId`. The `CourseInfoStep` shows the course read-only when `courseLocked` is true, so it cannot be edited into a different course. **Backend:** `resolve_course()` in `src/services/ingestion.py` looks the course up by primary key when `UploadConfirmRequest.courseId` is set (`src/router/dto/upload_dto.py`), so the batch attaches to exactly that course instead of being matched — or newly created — by name. An unknown id is a 404 with nothing written. |
+| **AC3:** A `course_number` / `course_id` column in the file is completely ignored | **Backend:** `src/services/ingestion.py` defines `COURSE_COLUMN_NAMES` and `is_course_column()`, which normalises a header to its alphanumerics so `course_number`, `Course ID`, `Kursnummer` and friends all match. `_is_dropped_column()` combines it with the existing pass/fail rule, and `preview_upload()` applies it twice: mapping entries naming a course column are filtered out before `df.rename()`, and any surviving column is dropped from the dataframe. |
+| **AC4:** No validation error is shown for the `course_number` column | **Backend:** because the column is dropped before the row loop, it never reaches the `missing_fields` checks — rows keep `is_valid = True`. Covered by `test_preview_ignores_course_columns_in_the_file` and `test_preview_ignores_a_mapping_that_targets_a_course_column` in `tests/test_api.py`. **Frontend:** `MapColumnsStep.tsx` and `CourseInfoStep.tsx` state plainly that course columns in the file are ignored. |
+| **Standalone wizard unaffected** | The "Batch Upload" nav entry opens the wizard with no handoff, so `courseId` stays `null`, the Course Number / Course Name fields stay editable, and `resolve_course()` falls back to matching by name (`test_confirm_without_a_course_id_still_matches_by_name`). |
+
+
 ---
 
 ## Code Standards & Readability Pledges

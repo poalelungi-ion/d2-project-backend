@@ -21,6 +21,10 @@ class ConfirmRecord(BaseModel):
 
 class UploadConfirmRequest(BaseModel):
     course: Optional[str] = None
+    # The course view the upload was started from. When present the batch
+    # attaches to exactly this course; the standalone wizard leaves it unset
+    # and the course is matched by name instead.
+    courseId: Optional[int] = None
     courseName: str
     ects: Optional[str] = "6"
     semester: str
