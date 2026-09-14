@@ -57,8 +57,27 @@ def get_dashboard_stats(db: Session):
     course_stats.sort(key=lambda x: x["pass_rate"])
     toughest_courses = course_stats[:5]
 
+    # Build activity heatmap
+    all_semesters = sorted(list({e.semester for c in courses for e in c.exams if e.semester}))
+    activity_heatmap = []
+    for sem in all_semesters:
+        distribution = {}
+        for s in active_students:
+            count = sum(
+                1 for r in s.results 
+                if r.exam and r.exam.semester == sem and not is_excused(r.absence_code)
+            )
+            distribution[count] = distribution.get(count, 0) + 1
+            
+        activity_heatmap.append({
+            "semester": sem,
+            "total_students": len(active_students),
+            "distribution": distribution
+        })
+
     return {
         "kpis": kpis,
         "toughest_courses": toughest_courses,
         "atRisk": sorted(at_risk, key=lambda x: x["fails"], reverse=True),
+        "activity_heatmap": activity_heatmap,
     }
