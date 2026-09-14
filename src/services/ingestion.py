@@ -222,10 +222,16 @@ def resolve_course(db: Session, req: UploadConfirmRequest) -> Course:
             )
         return course
 
+    if req.course and req.course.isdigit():
+        course_by_id = db.query(Course).filter(Course.course_id == int(req.course)).first()
+        if course_by_id is not None:
+            return course_by_id
+
     c_name = req.courseName if req.courseName else "Unnamed Course"
     course = db.query(Course).filter(Course.course_name == c_name).first()
     if course is None:
-        course = Course(course_id=abs(hash(c_name)) % (10**8), course_name=c_name)
+        cid = int(req.course) if (req.course and req.course.isdigit()) else abs(hash(c_name)) % (10**8)
+        course = Course(course_id=cid, course_name=c_name)
         db.add(course)
         db.flush()
     return course
@@ -290,7 +296,11 @@ def confirm_upload(db: Session, req: UploadConfirmRequest):
             db.add(res)
 
         db.commit()
-        return {"status": "success", "message": f"Successfully imported {len(req.records)} records."}
+        return {
+            "status": "success",
+            "message": f"Successfully imported {len(req.records)} records.",
+            "course_id": course_obj.course_id,
+        }
     except HTTPException:
         db.rollback()
         raise

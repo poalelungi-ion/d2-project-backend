@@ -138,6 +138,8 @@ def test_paste_preview_then_confirm():
     )
     assert confirm.status_code == 200
     assert "Successfully imported 1 records" in confirm.json()["message"]
+    assert "course_id" in confirm.json()
+    assert isinstance(confirm.json()["course_id"], int)
 
 
 def test_upload_preview_invalid_grade():
