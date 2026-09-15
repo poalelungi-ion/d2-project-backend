@@ -13,6 +13,7 @@ from src.router.dto import (
     CourseUpdate,
 )
 from src.services.grade_outcome import counted_attempts, mean_grade, result_outcome_fields
+from src.services.semester import semester_sort_key
 
 
 def get_all_courses(db: Session):
@@ -46,7 +47,7 @@ def get_all_courses(db: Session):
         passed_results = [r for r in graded if r.passed]
         passed = len(passed_results)
         avg_grade = mean_grade(passed_results)
-        latest_semester = sorted(list(semesters))[-1] if semesters else "N/A"
+        latest_semester = sorted(list(semesters), key=semester_sort_key)[-1] if semesters else "N/A"
 
         data.append({
             "course_id": c.course_id,
