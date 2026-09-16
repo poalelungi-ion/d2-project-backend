@@ -35,28 +35,3 @@ async def upload_file_preview(
 async def upload_confirm(req: UploadConfirmRequest, db: Session = Depends(get_db)):
     """Permanently archives vetted exam records using an atomic database transaction."""
     return ingestion_service.confirm_upload(db, req)
-
-
-@router.post("/api/upload/", summary="Direct file upload preview (legacy)")
-async def upload_grades(
-    file: UploadFile = File(...),
-    semester: str = Form(...),
-    course: str = Form(...),
-    courseName: Optional[str] = Form(None),
-    ects: Optional[str] = Form(None),
-    mapping: Optional[str] = Form(None),
-    nameSplitRule: Optional[str] = Form(None),
-    db: Session = Depends(get_db),
-):
-    """Direct file upload preview compatibility endpoint."""
-    return await ingestion_service.preview_upload(
-        file=file,
-        paste=None,
-        course=course,
-        courseName=courseName,
-        ects=ects,
-        semester=semester,
-        mapping=mapping,
-        nameSplitRule=nameSplitRule,
-        db=db,
-    )
