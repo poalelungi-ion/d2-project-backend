@@ -207,6 +207,7 @@ def test_upload_confirm_valid_grade():
     assert courses[0]["course_name"] == "Valid Course"
     assert courses[0]["pass_rate"] == 33.3  # 1 out of 3 passed
     assert len(courses[0]["marks"]) == 3
+    assert all(mark["result_id"] for mark in courses[0]["marks"])
 
 def test_database_persistence_simulation():
     # Write a record

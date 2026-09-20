@@ -32,6 +32,7 @@ def get_all_courses(db: Session):
             results.extend(e.results)
             for r in e.results:
                 marks_detailed.append({
+                    "result_id": r.result_id,
                     "student_id": r.student.student_id if r.student else None,
                     "student_name": r.student.name if r.student else "Unknown",
                     "program": r.student.program if r.student else "Unknown",
