@@ -706,6 +706,44 @@ def test_confirm_attaches_records_to_the_active_course_id():
     assert courses[0]["total_attempts"] == 1
 
 
+def test_course_without_submissions_reports_zeros_until_the_first_one_arrives():
+    """The client shows "No submissions yet" while total_attempts is 0, so it must stay exact."""
+    db = TestingSessionLocal()
+    db.add(models.Course(course_id=3546, course_name="Empty Course"))
+    db.commit()
+    db.close()
+
+    empty = client.get("/api/courses/").json()[0]
+    assert empty["total_attempts"] == 0
+    assert empty["marks"] == []
+    assert empty["pass_rate"] == 0
+    assert empty["avg_grade"] == 0
+    assert client.get("/api/stats/").status_code == 200
+
+    payload = {
+        "courseId": 3546,
+        "courseName": "Empty Course",
+        "ects": "6",
+        "semester": "WISE_25",
+        "attemptType": "Exam 1",
+        "records": [
+            {
+                "student_id": "41021",
+                "first_name": "Lena",
+                "last_name": "Schneider",
+                "program": "SE Master",
+                "semester": "WISE_25",
+                "grade": "1.7",
+            }
+        ],
+    }
+    assert client.post("/api/upload/confirm/", json=payload).status_code == 200
+
+    first = client.get("/api/courses/").json()[0]
+    assert first["total_attempts"] == 1
+    assert first["pass_rate"] == 100.0
+
+
 def test_confirm_rejects_an_unknown_course_id():
     payload = {
         "courseId": 999999,
