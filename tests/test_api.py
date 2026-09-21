@@ -1,9 +1,13 @@
+from contextlib import contextmanager
+
 import pytest
 from fastapi.testclient import TestClient
 from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker
 from main import app
 from database import Base, get_db
+from src.database.models import User
+from src.lib.auth.validator import get_current_user
 import models
 import io
 
@@ -23,7 +27,31 @@ def override_get_db():
 
 app.dependency_overrides[get_db] = override_get_db
 
+# Every data route now sits behind get_current_user. These tests are about the
+# course/student/upload behaviour rather than about authentication, so they run
+# as a stand-in account; tests/test_auth.py drops this override and exercises
+# the real token path.
+TEST_USER = User(
+    user_id=1,
+    email="test.lecturer@uni-hildesheim.de",
+    name="Test Lecturer",
+    password_hash="not-used-here",
+    is_active=True,
+)
+
+app.dependency_overrides[get_current_user] = lambda: TEST_USER
+
 client = TestClient(app)
+
+
+@contextmanager
+def anonymous_client():
+    """Runs a block with the authentication override lifted."""
+    app.dependency_overrides.pop(get_current_user, None)
+    try:
+        yield client
+    finally:
+        app.dependency_overrides[get_current_user] = lambda: TEST_USER
 
 @pytest.fixture(autouse=True)
 def run_around_tests():

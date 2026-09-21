@@ -1,25 +1,43 @@
 """
-Authentication and Authorization Validator.
-Defines the HTTPBearer security dependency for Swagger UI testability and protects mutating endpoints.
+Authentication Dependency.
+
+The HTTPBearer scheme is kept so the Swagger UI "Authorize" modal still works
+-- paste an access token from POST /api/auth/login into it.
 """
 from fastapi import Depends, HTTPException, status
 from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
+from sqlalchemy.orm import Session
 
-from src.database import config
+from src.database.connection import get_db
+from src.database.models import User
+from src.lib.auth.tokens import ACCESS_TOKEN_TYPE, TokenError, decode_token
 
-# HTTPBearer enables the Swagger UI Authorize modal with Bearer scheme
 security = HTTPBearer(auto_error=False)
 
+UNAUTHORIZED = HTTPException(
+    status_code=status.HTTP_401_UNAUTHORIZED,
+    detail="Not authenticated",
+    headers={"WWW-Authenticate": "Bearer"},
+)
 
-def verify_token(credentials: HTTPAuthorizationCredentials = Depends(security)) -> bool:
+
+def get_current_user(
+    credentials: HTTPAuthorizationCredentials = Depends(security),
+    db: Session = Depends(get_db),
+) -> User:
     """
-    Validates that the request Authorization header contains a valid Bearer token matching config.API_TOKEN.
-    Works seamlessly both in production/client requests and in Swagger UI interactive testing.
+    Resolves the bearer access token to the User row it names.
     """
-    if not credentials or credentials.scheme.lower() != "bearer" or credentials.credentials != config.API_TOKEN:
-        raise HTTPException(
-            status_code=status.HTTP_401_UNAUTHORIZED,
-            detail="Unauthorized: Invalid or missing bearer token",
-            headers={"WWW-Authenticate": "Bearer"},
-        )
-    return True
+    if not credentials or credentials.scheme.lower() != "bearer":
+        raise UNAUTHORIZED
+
+    try:
+        payload = decode_token(credentials.credentials, ACCESS_TOKEN_TYPE)
+        user_id = int(payload["sub"])
+    except (TokenError, KeyError, ValueError) as exc:
+        raise UNAUTHORIZED from exc
+
+    user = db.query(User).filter(User.user_id == user_id).first()
+    if user is None or not user.is_active:
+        raise UNAUTHORIZED
+    return user

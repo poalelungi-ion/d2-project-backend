@@ -6,7 +6,6 @@ from fastapi import APIRouter, Depends, status
 from sqlalchemy.orm import Session
 
 from src.database.connection import get_db
-from src.lib.auth.validator import verify_token
 from src.router.dto import (
     AddGradeRequest,
     StudentCreate,
@@ -32,22 +31,20 @@ def get_student_details(student_id: int, db: Session = Depends(get_db)):
 
 @router.post(
     "/api/students/",
-    dependencies=[Depends(verify_token)],
     status_code=status.HTTP_201_CREATED,
     summary="Create student profile",
 )
 def create_student(student: StudentCreate, db: Session = Depends(get_db)):
-    """Creates a new student profile in the database (Protected endpoint)."""
+    """Creates a new student profile in the database (requires a signed-in user)."""
     return student_service.create_student(db, student)
 
 
 @router.put(
     "/api/students/{student_id}",
-    dependencies=[Depends(verify_token)],
     summary="Update student profile",
 )
 def update_student(student_id: int, update: StudentUpdate, db: Session = Depends(get_db)):
-    """Updates an existing student profile under optimistic concurrency control (Protected endpoint)."""
+    """Updates an existing student profile under optimistic concurrency control (requires a signed-in user)."""
     return student_service.update_student(db, student_id, update)
 
 
