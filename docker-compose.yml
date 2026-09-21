@@ -23,8 +23,12 @@ services:
       - "8000:8000"
     environment:
       DATABASE_URL: postgresql://${POSTGRES_USER:-spa_user}:${POSTGRES_PASSWORD:-spa_password}@db/${POSTGRES_DB:-spa_db}
-      API_TOKEN: ${API_TOKEN:-sse-staff-token}
+      # Signs access and refresh tokens; set a real one outside development.
+      JWT_SECRET: ${JWT_SECRET:-insecure-development-secret-change-me}
+      # Explicit origin: the refresh cookie makes auth requests credentialed,
+      # and browsers reject a wildcard origin on those.
       CORS_ORIGINS: ${CORS_ORIGINS:-http://localhost:5173}
+      COOKIE_SECURE: ${COOKIE_SECURE:-false}
       PYTHONPATH: /app
     volumes:
       - .:/app

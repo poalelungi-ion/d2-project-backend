@@ -150,11 +150,28 @@ Copy `.env.example` to `.env` to override them.
 | Variable | Default | Purpose |
 | :--- | :--- | :--- |
 | `DATABASE_URL` | `postgresql://spa_user:spa_password@db/spa_db` | SQLAlchemy connection URL |
-| `API_TOKEN` | `sse-staff-token` | Bearer token required on mutating endpoints |
-| `CORS_ORIGINS` | `*` | Comma-separated allow-list |
+| `JWT_SECRET` | development placeholder | Signs access and refresh tokens |
+| `ACCESS_TOKEN_TTL_MINUTES` | `15` | Access token lifetime |
+| `REFRESH_TOKEN_TTL_DAYS` | `14` | Refresh token lifetime |
+| `UNIVERSITY_EMAIL_DOMAIN` | `uni-hildesheim.de` | The only mail domain accounts may use |
+| `MIN_PASSWORD_LENGTH` | `10` | Shortest password accepted at registration |
+| `BCRYPT_ROUNDS` | `12` | Password hashing work factor |
+| `COOKIE_SECURE` | `false` | Send the refresh cookie only over HTTPS |
+| `COOKIE_SAMESITE` | `lax` | SameSite flag on the refresh cookie |
+| `DEBUG` | `true` | `false` turns the startup warnings into errors |
+| `CORS_ORIGINS` | `http://localhost:5173,http://127.0.0.1:5173` | Comma-separated allow-list |
 | `SEED_ON_STARTUP` | `true` | Seed demonstration data into an empty database |
+| `BOOTSTRAP_ADMIN_EMAIL` / `_PASSWORD` | empty | Optional first account, created only while `users` is empty |
 
-`API_TOKEN` must match the client's `VITE_API_TOKEN`.
+Two of these are not really optional outside development:
+
+* `JWT_SECRET` signs every token, so a known value lets anyone mint a session
+  for any account. Generate one with `openssl rand -hex 32`. The app refuses to
+  start on the default once `DEBUG=false`.
+* `CORS_ORIGINS` cannot be `*`. The refresh cookie makes the auth calls
+  credentialed, and browsers reject a wildcard origin on those; a `*` left in
+  the environment is dropped with a warning and the development origins are
+  used instead.
 
 ## Tests
 
@@ -172,14 +189,78 @@ execute them during collection; see `tests/smoke/README.md`.
 
 ## Authentication
 
-Mutating endpoints depend on `verify_token` from `dependencies.py`, which
-requires the header:
+Every route that carries course or student data requires a signed-in user. The
+guard is applied once, in `src/router/router.py`, where each data router is
+included with `dependencies=[Depends(get_current_user)]` -- so a new endpoint is
+protected by default rather than by remembering a decorator argument.
 
-```
-Authorization: Bearer <API_TOKEN>
+### Accounts
+
+Accounts are restricted to the university mail domain, which lives in one place:
+`config.UNIVERSITY_EMAIL_DOMAIN`. `RegisterRequest` validates against it, so a
+foreign address is a 422 from the schema layer and never reaches a service. The
+client mirrors the constant in `src/utils/constants.ts` purely to give instant
+form feedback; that copy enforces nothing.
+
+Passwords are stored only as bcrypt hashes (`src/lib/auth/passwords.py`). Each
+hash carries its own random salt, so two accounts with the same password store
+different digests. Nothing in the schema can hold a plaintext or reversible
+password. Registration rejects anything past bcrypt's 72-byte ceiling rather
+than hashing a silent truncation.
+
+### Tokens
+
+Two token types, one signing key, told apart by a `typ` claim that is checked on
+decode -- a refresh token cannot be replayed as a bearer token on a data route.
+
+| | Lifetime | Delivered as | Held by the client in |
+| :--- | :--- | :--- | :--- |
+| Access | `ACCESS_TOKEN_TTL_MINUTES` | Response body | Memory only |
+| Refresh | `REFRESH_TOKEN_TTL_DAYS` | `httpOnly` cookie, path `/api/auth` | Nothing -- JavaScript cannot read it |
+
+Refresh tokens rotate: `/api/auth/refresh` revokes the token presented and
+issues a new pair, so each one is good for exactly one exchange. `refresh_tokens`
+records the `jti` of each issuance, never the token itself, which is what makes
+revocation possible without the database being able to reconstruct the
+credential.
+
+Presenting an already-rotated token means two parties hold the same cookie and
+there is no way to tell which one is legitimate, so every session for that
+account is revoked and both must sign in again.
+
+| Endpoint | Auth | Purpose |
+| :--- | :--- | :--- |
+| `POST /api/auth/register` | public | Create an account in the university domain |
+| `POST /api/auth/login` | public | Exchange credentials for a token pair |
+| `POST /api/auth/refresh` | refresh cookie | Rotate the session |
+| `POST /api/auth/logout` | none | Revoke the session and clear the cookie |
+| `GET /api/auth/me` | access token | The account behind the token |
+
+For Swagger UI, paste the `access_token` from a login response into the
+**Authorize** modal.
+
+### Forgotten passwords
+
+There is no self-service reset, and a bcrypt hash cannot be read back, so a
+forgotten password is replaced rather than recovered:
+
+```bash
+# List the registered addresses
+python scripts/set_password.py --list x
+
+# Set a new password (prompted for, so it stays out of the shell history)
+python scripts/set_password.py someone@uni-hildesheim.de
 ```
 
-Read endpoints are open.
+Run it with the same `DATABASE_URL` the server uses. It revokes the account's
+existing sessions, on the assumption that a password is being changed because
+the old one may be compromised.
+
+> Registration is open to any `@uni-hildesheim.de` address, and every account
+> sees all course and student data. The domain check is a filter on who can
+> sign up, not an authorization model. Accounts can be switched off
+> individually by setting `users.is_active` to false, which takes effect within
+> one access-token lifetime.
 
 ## Documentation
 

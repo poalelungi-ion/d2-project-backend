@@ -12,11 +12,23 @@ from fastapi.openapi.utils import get_openapi
 
 from src.database import config
 from src.database.connection import Base, engine
-from src.database.seed import seed_db
+from src.database.seed import seed_db, seed_bootstrap_admin
 from src.lib.error_handler import register_error_handlers
 from src.router.router import api_router
 
 logger = logging.getLogger("uvicorn.error")
+
+
+def check_auth_config():
+    if config.COOKIE_SAMESITE == "none" and not config.COOKIE_SECURE:
+        raise RuntimeError("COOKIE_SAMESITE=none requires COOKIE_SECURE=true; browsers drop the cookie otherwise.")
+
+    if config.CORS_WILDCARD_REQUESTED:
+        logger.warning(
+            "CORS_ORIGINS contained '*', which browsers reject for the credentialed "
+            "requests the refresh cookie needs. Using %s instead.",
+            config.CORS_ORIGINS,
+        )
 
 
 def run_migrations():
@@ -36,9 +48,12 @@ def run_migrations():
 async def lifespan(app: FastAPI):
     """
     Application lifespan manager.
-    Runs database schema migrations and seeds baseline data on startup.
+    Validates the authentication configuration, runs database schema
+    migrations and seeds baseline data on startup.
     """
+    check_auth_config()
     run_migrations()
+    seed_bootstrap_admin()
     if config.SEED_ON_STARTUP:
         seed_db()
     yield
@@ -89,8 +104,11 @@ def custom_openapi():
         "HTTPBearer": {
             "type": "http",
             "scheme": "bearer",
-            "bearerFormat": "Token",
-            "description": "Enter the API Bearer Token (default: sse-staff-token) to authorize Swagger requests.",
+            "bearerFormat": "JWT",
+            "description": (
+                "Paste the access_token returned by POST /api/auth/login. "
+                "It expires after a few minutes; log in again for a fresh one."
+            ),
         }
     }
     app.openapi_schema = openapi_schema

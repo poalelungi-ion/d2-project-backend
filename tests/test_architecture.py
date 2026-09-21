@@ -4,7 +4,7 @@ Tests for Architecture, Separation of Concerns, Transactions, and Swagger Securi
 import pytest
 from fastapi import HTTPException
 
-from tests.test_api import client, TestingSessionLocal
+from tests.test_api import anonymous_client, client, TestingSessionLocal
 from src.database.models import Student, Course, Exam, ExamResult
 from src.router.dto import StudentCreate, AddGradeRequest
 from src.services.student import create_student, add_student_grade
@@ -63,20 +63,38 @@ def test_transaction_rollback_on_invalid_student():
 
 
 def test_swagger_bearer_authorization_enforcement():
-    """Verifies mutating endpoints reject unauthorized calls with 401 and accept valid tokens."""
-    # Unauthorized
-    bad_res = client.post(
-        "/api/students/",
-        json={"student_id": 8001, "name": "Auth Tester", "program": "SE Master"},
-    )
-    assert bad_res.status_code == 401
+    """
+    Verifies endpoints reject unauthenticated calls with 401 and accept an
+    access token issued by the login endpoint.
 
-    # Authorized with valid Bearer token
-    good_res = client.post(
-        "/api/students/",
-        headers={"Authorization": "Bearer sse-staff-token"},
-        json={"student_id": 8001, "name": "Auth Tester", "program": "SE Master"},
-    )
-    assert good_res.status_code == 201
-    assert good_res.json()["student_id"] == 8001
+    The credential is per-account and short-lived: the shared API_TOKEN that
+    used to guard these routes was compiled into every client bundle, so
+    anyone who loaded the page held it.
+    """
+    student = {"student_id": 8001, "name": "Auth Tester", "program": "SE Master"}
+
+    with anonymous_client() as api:
+        api.cookies.clear()
+        assert api.post("/api/students/", json=student).status_code == 401
+
+        assert api.post(
+            "/api/auth/register",
+            json={
+                "email": "arch.tester@uni-hildesheim.de",
+                "name": "Arch Tester",
+                "password": "architecture-test-pw",
+            },
+        ).status_code == 201
+        token = api.post(
+            "/api/auth/login",
+            json={"email": "arch.tester@uni-hildesheim.de", "password": "architecture-test-pw"},
+        ).json()["access_token"]
+
+        good_res = api.post(
+            "/api/students/",
+            headers={"Authorization": f"Bearer {token}"},
+            json=student,
+        )
+        assert good_res.status_code == 201
+        assert good_res.json()["student_id"] == 8001
 

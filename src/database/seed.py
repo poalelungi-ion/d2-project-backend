@@ -5,10 +5,49 @@ Populates an empty database with a representative roster, course catalogue,
 exams and results so the dashboards have something to display on a fresh
 deployment.
 """
+import logging
 import random
 
+from src.database import config
 from src.database.connection import get_db
-from src.database.models import Course, Exam, ExamResult, Student
+from src.database.models import Course, Exam, ExamResult, Student, User
+from src.lib.auth.passwords import hash_password
+from src.router.dto.auth_dto import normalize_university_email
+
+logger = logging.getLogger("uvicorn.error")
+
+
+def seed_bootstrap_admin():
+    """
+    Creates the first account from BOOTSTRAP_ADMIN_EMAIL / _PASSWORD when the
+    users table is empty.
+
+    Optional by design: with registration open, a deployment can simply have
+    its first user sign up. This exists so an automated deployment can come up
+    with a known account without anyone writing a bcrypt hash by hand. The
+    password is read from the environment and hashed immediately -- it is never
+    stored or logged as given.
+    """
+    if not config.BOOTSTRAP_ADMIN_EMAIL or not config.BOOTSTRAP_ADMIN_PASSWORD:
+        return
+
+    db = next(get_db())
+    try:
+        if db.query(User).count() > 0:
+            return
+        email = normalize_university_email(config.BOOTSTRAP_ADMIN_EMAIL)
+        db.add(User(
+            email=email,
+            name=config.BOOTSTRAP_ADMIN_NAME,
+            password_hash=hash_password(config.BOOTSTRAP_ADMIN_PASSWORD),
+        ))
+        db.commit()
+        logger.info("Bootstrap account created for %s.", email)
+    except Exception as e:
+        db.rollback()
+        logger.warning("Bootstrap admin not created: %s", e)
+    finally:
+        db.close()
 
 
 def seed_db():
