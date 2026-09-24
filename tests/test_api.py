@@ -707,7 +707,9 @@ def test_confirm_attaches_records_to_the_active_course_id():
 
 
 def test_course_without_submissions_reports_zeros_until_the_first_one_arrives():
-    """The client shows "No submissions yet" while total_attempts is 0, so it must stay exact."""
+    """The course page derives its "No submissions yet" state from `marks`, so an
+    empty course must return an empty list -- without dividing by zero -- until
+    the first upload lands."""
     db = TestingSessionLocal()
     db.add(models.Course(course_id=3546, course_name="Empty Course"))
     db.commit()
@@ -740,6 +742,7 @@ def test_course_without_submissions_reports_zeros_until_the_first_one_arrives():
     assert client.post("/api/upload/confirm/", json=payload).status_code == 200
 
     first = client.get("/api/courses/").json()[0]
+    assert len(first["marks"]) == 1
     assert first["total_attempts"] == 1
     assert first["pass_rate"] == 100.0
 
