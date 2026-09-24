@@ -15,10 +15,10 @@ BASE_URL = os.getenv("SMOKE_BASE_URL", "http://localhost:8000")
 url = f'{BASE_URL}/api/upload/'
 
 csv_data = """Matrikelnr,Name,Studiengang,Fachsemester,Note
-123456,Smith, John,B.Sc. CS,3,2.0
-234567,Doe, Jane,B.Sc. SE,1,1.3
-345678,Johnson, Mark,M.Sc. DS,2,4.0
-456789,Invalid, User,B.Sc. CS,1,6.0
+123456,Smith, John,SE Master,3,2.0
+234567,Doe, Jane,SE Master,1,1.3
+345678,Johnson, Mark,Data Science Master,2,4.0
+456789,Invalid, User,SE Master,1,6.0
 """
 
 files = {
