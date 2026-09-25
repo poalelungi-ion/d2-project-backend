@@ -585,6 +585,78 @@ def test_batch_grade_update_ignores_client_passed_flag():
     assert updated["outcome"] == "failed"
 
 
+def _import_one_grade(student_id: str, course: str, grade: str) -> dict:
+    payload = {
+        "course": course,
+        "courseName": f"{course} Course",
+        "ects": "6",
+        "semester": "WISE_25",
+        "records": [
+            {
+                "student_id": student_id,
+                "first_name": "Edit",
+                "last_name": "FromCourse",
+                "program": "SE Master",
+                "semester": "WISE_25",
+                "grade": grade,
+            }
+        ],
+    }
+    assert client.post("/api/upload/confirm/", json=payload).status_code == 200
+    return client.get(f"/api/students/{student_id}").json()["transcript"][0]
+
+
+def test_batch_grade_update_accepts_the_same_cells_as_upload():
+    entry = _import_one_grade("31041", "EDIT101", "2.0")
+    response = client.post(
+        "/api/grades/",
+        json=[
+            {
+                "result_id": entry["result_id"],
+                "version": entry["version"],
+                "grade": "NE",
+            }
+        ],
+    )
+    assert response.status_code == 200
+    failed = client.get("/api/students/31041").json()["transcript"][0]
+    assert failed["grade"] == 5.0
+    assert failed["outcome"] == "failed"
+    assert failed["absence_code"] == "NE"
+
+    excused = client.post(
+        "/api/grades/",
+        json=[
+            {
+                "result_id": failed["result_id"],
+                "version": failed["version"],
+                "grade": "AT",
+            }
+        ],
+    )
+    assert excused.status_code == 200
+    sitting = client.get("/api/students/31041").json()["transcript"][0]
+    assert sitting["grade"] is None
+    assert sitting["outcome"] == "excused"
+    assert sitting["absence_code"] == "AT"
+
+
+def test_batch_grade_update_rejects_invalid_grades():
+    entry = _import_one_grade("31042", "EDIT102", "1.7")
+    for grade in ("6.0", "Passed", "", "0.7"):
+        response = client.post(
+            "/api/grades/",
+            json=[
+                {
+                    "result_id": entry["result_id"],
+                    "version": entry["version"],
+                    "grade": grade,
+                }
+            ],
+        )
+        assert response.status_code == 422, grade
+
+
 def test_excused_attempts_are_excluded_from_pass_rate_and_at_risk():
     payload = {
         "course": "EXCUSE101",
