@@ -11,6 +11,7 @@ from fastapi import HTTPException, UploadFile, status
 from sqlalchemy.orm import Session
 
 from src.database.models import Course, Exam, ExamResult, Student
+from src.lib.study_program import UNASSIGNED_PROGRAM, is_known_program
 from src.router.dto import UploadConfirmRequest
 from src.services.grade_outcome import (
     UnrecognizedGrade,
@@ -19,10 +20,6 @@ from src.services.grade_outcome import (
 )
 
 _FILE_EXTENSIONS = (".xlsx", ".xls", ".csv", ".tsv", ".ods")
-
-# A blank study program is a minor gap, not a broken record: it is filled with
-# this placeholder instead of failing validation and losing the row.
-UNASSIGNED_PROGRAM = "Unassigned / Unknown"
 
 # The course an import belongs to comes from the Course view the lecturer
 # started the upload in, never from the sheet. A course identifier column is
@@ -174,12 +171,15 @@ async def preview_upload(
             record["program"] = record["program"].strip() or UNASSIGNED_PROGRAM
 
             missing = []
+            invalid = []
             if not record["student_id"]:
                 missing.append("Matrikelnummer")
             if not record["first_name"] and not record["name"]:
                 missing.append("First Name")
             if not record["last_name"] and not record["name"]:
                 missing.append("Last Name")
+            if not is_known_program(record["program"]):
+                invalid.append("Study Program")
             if not record["semester"]:
                 missing.append("Semester")
 
@@ -193,7 +193,8 @@ async def preview_upload(
                 missing.append("Grade")
 
             record["missing_fields"] = missing
-            record["is_valid"] = len(missing) == 0
+            record["invalid_fields"] = invalid
+            record["is_valid"] = len(missing) == 0 and len(invalid) == 0
             preview_data.append(record)
 
         return {"status": "success", "preview_data": preview_data}

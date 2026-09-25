@@ -21,7 +21,7 @@ payload = {
             "first_name": "Test",
             "last_name": "Student",
             "name": "Test Student",
-            "program": "Test Program",
+            "program": "SE Master",
             "semester": "WISE_25",
             "grade": "1.0"
         }

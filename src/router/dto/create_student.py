@@ -5,17 +5,19 @@ Validates inputs for student creation, profile editing, status updates, and grad
 from typing import Optional
 from pydantic import BaseModel, Field
 
+from src.lib.study_program import NamedStudyProgram
+
 
 class StudentCreate(BaseModel):
     student_id: int
     name: str
-    program: str = "SE Master"
+    program: NamedStudyProgram = "SE Master"
     status: str = "active"
 
 
 class StudentUpdate(BaseModel):
     new_student_id: Optional[int] = None
-    program: str
+    program: NamedStudyProgram
     name: str
     status: str
     version: int
