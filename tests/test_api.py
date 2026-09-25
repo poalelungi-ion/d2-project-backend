@@ -271,6 +271,7 @@ def test_upload_preview_missing_program_is_valid():
     row = response.json()["preview_data"][0]
     assert row["program"] == "Unassigned / Unknown"
     assert "Study Program" not in row["missing_fields"]
+    assert "Study Program" not in row.get("invalid_fields", [])
     assert row["is_valid"] is True
 
 
@@ -289,7 +290,8 @@ def test_upload_preview_unknown_program_is_flagged():
     assert response.status_code == 200
     row = response.json()["preview_data"][0]
     assert row["program"] == "CS"
-    assert "Study Program" in row["missing_fields"]
+    assert "Study Program" not in row["missing_fields"]
+    assert "Study Program" in row["invalid_fields"]
     assert row["is_valid"] is False
 
 

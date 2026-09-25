@@ -171,6 +171,7 @@ async def preview_upload(
             record["program"] = record["program"].strip() or UNASSIGNED_PROGRAM
 
             missing = []
+            invalid = []
             if not record["student_id"]:
                 missing.append("Matrikelnummer")
             if not record["first_name"] and not record["name"]:
@@ -178,7 +179,7 @@ async def preview_upload(
             if not record["last_name"] and not record["name"]:
                 missing.append("Last Name")
             if not is_known_program(record["program"]):
-                missing.append("Study Program")
+                invalid.append("Study Program")
             if not record["semester"]:
                 missing.append("Semester")
 
@@ -192,7 +193,8 @@ async def preview_upload(
                 missing.append("Grade")
 
             record["missing_fields"] = missing
-            record["is_valid"] = len(missing) == 0
+            record["invalid_fields"] = invalid
+            record["is_valid"] = len(missing) == 0 and len(invalid) == 0
             preview_data.append(record)
 
         return {"status": "success", "preview_data": preview_data}
