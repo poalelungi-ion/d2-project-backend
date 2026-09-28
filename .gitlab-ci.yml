@@ -84,9 +84,9 @@ require_approval:
     - sh scripts/require_approval.sh
 
 # Publishes the API as a container image so other pipelines can run against a
-# real backend without rebuilding it. Tagged by commit and by branch slug, so
-# on main this publishes :main and on a branch :test-e2e -- a branch can be
-# exercised without touching the tag the client pipeline pulls.
+# real backend without rebuilding it. Publishes the commit tag, which a
+# downstream pipeline can pin to, alongside the ref slug -- ":main" here, and
+# the tag the client pipeline pulls by default.
 #
 # Built with Kaniko rather than docker-in-docker: dind needs a privileged
 # runner and a reachable daemon container, and these runners provide neither
@@ -99,8 +99,8 @@ publish_image:
     # The image's own entrypoint is the executor; clear it so GitLab can run
     # the script below in a shell.
     entrypoint: [""]
+  # Default branch only. pulls the :main tag, and an image per MR would fill the registry.
   rules:
-    - if: $CI_PIPELINE_SOURCE == "merge_request_event"
     - if: $CI_COMMIT_BRANCH == $CI_DEFAULT_BRANCH
   before_script:
     # Kaniko reads registry credentials from this file rather than `docker
