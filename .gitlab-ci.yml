@@ -87,42 +87,38 @@ require_approval:
 # real backend without rebuilding it. Tagged by commit and by branch slug, so
 # on main this publishes :main and on a branch :test-e2e -- a branch can be
 # exercised without touching the tag the client pipeline pulls.
+#
+# Built with Kaniko rather than docker-in-docker: dind needs a privileged
+# runner and a reachable daemon container, and these runners provide neither
+# ("no route to host" on the dind service). Kaniko builds from the Dockerfile
+# in this job's own container, so there is no daemon and no service to reach.
 publish_image:
   stage: publish
-  image: docker:27
-  services: [docker:27-dind]
+  image:
+    name: gcr.io/kaniko-project/executor:v1.23.2-debug
+    # The image's own entrypoint is the executor; clear it so GitLab can run
+    # the script below in a shell.
+    entrypoint: [""]
   rules:
     - if: $CI_PIPELINE_SOURCE == "merge_request_event"
     - if: $CI_COMMIT_BRANCH == $CI_DEFAULT_BRANCH
-  variables:
-    # Plain TCP to the dind service. The TLS setup needs the runner to share
-    # dind's generated certificates into this container through a /certs
-    # volume, which these runners do not do -- the job then dies on
-    # "open /certs/client/ca.pem: no such file or directory". Emptying
-    # DOCKER_TLS_CERTDIR tells dind to serve without TLS on 2375 instead.
-    # The port is only reachable from this job's own service network.
-    DOCKER_HOST: tcp://docker:2375
-    DOCKER_TLS_CERTDIR: ""
-    # BuildKit, for the inline cache the --cache-from below reads.
-    DOCKER_BUILDKIT: "1"
   before_script:
-    # Confirms the daemon is actually reachable before anything depends on it.
-    - docker info
-    # CI_REGISTRY_USER / _PASSWORD are injected by GitLab and scoped to this
-    # project's registry for the length of the job; nothing needs configuring.
-    - echo "$CI_REGISTRY_PASSWORD" | docker login -u "$CI_REGISTRY_USER" --password-stdin "$CI_REGISTRY"
+    # Kaniko reads registry credentials from this file rather than `docker
+    # login`. CI_REGISTRY_USER / _PASSWORD are injected by GitLab and scoped to
+    # this project's registry for the length of the job.
+    - mkdir -p /kaniko/.docker
+    - |
+      cat > /kaniko/.docker/config.json <<EOF
+      {"auths":{"$CI_REGISTRY":{"username":"$CI_REGISTRY_USER","password":"$CI_REGISTRY_PASSWORD"}}}
+      EOF
   script:
-    # Warm the layer cache from this branch's last image, falling back to main.
-    # Both pulls fail harmlessly when the tag does not exist yet.
-    - docker pull "$CI_REGISTRY_IMAGE:$CI_COMMIT_REF_SLUG" || true
-    - docker pull "$CI_REGISTRY_IMAGE:main" || true
-    - docker build
-        --cache-from "$CI_REGISTRY_IMAGE:$CI_COMMIT_REF_SLUG"
-        --cache-from "$CI_REGISTRY_IMAGE:main"
-        --build-arg BUILDKIT_INLINE_CACHE=1
-        --tag "$CI_REGISTRY_IMAGE:$CI_COMMIT_SHORT_SHA"
-        --tag "$CI_REGISTRY_IMAGE:$CI_COMMIT_REF_SLUG"
-        .
-    - docker push "$CI_REGISTRY_IMAGE:$CI_COMMIT_SHORT_SHA"
-    - docker push "$CI_REGISTRY_IMAGE:$CI_COMMIT_REF_SLUG"
+    # --cache pushes intermediate layers to a side repository, so the pip
+    # install in the Dockerfile is reused until requirements.txt changes.
+    - /kaniko/executor
+        --context "$CI_PROJECT_DIR"
+        --dockerfile "$CI_PROJECT_DIR/Dockerfile"
+        --destination "$CI_REGISTRY_IMAGE:$CI_COMMIT_SHORT_SHA"
+        --destination "$CI_REGISTRY_IMAGE:$CI_COMMIT_REF_SLUG"
+        --cache=true
+        --cache-repo "$CI_REGISTRY_IMAGE/cache"
     - echo "Published $CI_REGISTRY_IMAGE:$CI_COMMIT_SHORT_SHA and :$CI_COMMIT_REF_SLUG"
