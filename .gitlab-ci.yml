@@ -1,4 +1,4 @@
-stages: [quality]
+stages: [quality, publish]
 
 variables:
   PIP_CACHE_DIR: "$CI_PROJECT_DIR/.cache/pip"
@@ -82,3 +82,40 @@ require_approval:
     - apk add --no-cache curl jq
   script:
     - sh scripts/require_approval.sh
+
+# Publishes the API as a container image so other pipelines can run against a
+# real backend without rebuilding it. 
+publish_image:
+  stage: publish
+  image: docker:27
+  services: [docker:27-dind]
+  # Default branch only: feature branches and merge requests have no consumer
+  # yet, and a tag per branch would fill the registry with images nothing pulls.
+  rules:
+    - if: $CI_COMMIT_BRANCH == $CI_DEFAULT_BRANCH
+  variables:
+    # Talk to the dind service over TLS. GitLab shares the generated
+    # certificates between the service and this job through DOCKER_TLS_CERTDIR.
+    DOCKER_HOST: tcp://docker:2376
+    DOCKER_TLS_CERTDIR: "/certs"
+    DOCKER_TLS_VERIFY: "1"
+    DOCKER_CERT_PATH: "/certs/client"
+    # BuildKit, for the inline cache the --cache-from below reads.
+    DOCKER_BUILDKIT: "1"
+  before_script:
+    # CI_REGISTRY_USER / _PASSWORD are injected by GitLab and scoped to this
+    # project's registry for the length of the job; nothing needs configuring.
+    - echo "$CI_REGISTRY_PASSWORD" | docker login -u "$CI_REGISTRY_USER" --password-stdin "$CI_REGISTRY"
+  script:
+    # Warm the layer cache from the last published image. Fails harmlessly on
+    # the very first run, when there is no :main to pull yet.
+    - docker pull "$CI_REGISTRY_IMAGE:main" || true
+    - docker build
+        --cache-from "$CI_REGISTRY_IMAGE:main"
+        --build-arg BUILDKIT_INLINE_CACHE=1
+        --tag "$CI_REGISTRY_IMAGE:$CI_COMMIT_SHORT_SHA"
+        --tag "$CI_REGISTRY_IMAGE:main"
+        .
+    - docker push "$CI_REGISTRY_IMAGE:$CI_COMMIT_SHORT_SHA"
+    - docker push "$CI_REGISTRY_IMAGE:main"
+    - echo "Published $CI_REGISTRY_IMAGE:$CI_COMMIT_SHORT_SHA and :main"
