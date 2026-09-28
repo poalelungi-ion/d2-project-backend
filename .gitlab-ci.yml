@@ -84,14 +84,15 @@ require_approval:
     - sh scripts/require_approval.sh
 
 # Publishes the API as a container image so other pipelines can run against a
-# real backend without rebuilding it. 
+# real backend without rebuilding it. Tagged by commit and by branch slug, so
+# on main this publishes :main and on a branch :test-e2e -- a branch can be
+# exercised without touching the tag the client pipeline pulls.
 publish_image:
   stage: publish
   image: docker:27
   services: [docker:27-dind]
-  # Default branch only: feature branches and merge requests have no consumer
-  # yet, and a tag per branch would fill the registry with images nothing pulls.
   rules:
+    - if: $CI_PIPELINE_SOURCE == "merge_request_event"
     - if: $CI_COMMIT_BRANCH == $CI_DEFAULT_BRANCH
   variables:
     # Talk to the dind service over TLS. GitLab shares the generated
@@ -107,15 +108,17 @@ publish_image:
     # project's registry for the length of the job; nothing needs configuring.
     - echo "$CI_REGISTRY_PASSWORD" | docker login -u "$CI_REGISTRY_USER" --password-stdin "$CI_REGISTRY"
   script:
-    # Warm the layer cache from the last published image. Fails harmlessly on
-    # the very first run, when there is no :main to pull yet.
+    # Warm the layer cache from this branch's last image, falling back to main.
+    # Both pulls fail harmlessly when the tag does not exist yet.
+    - docker pull "$CI_REGISTRY_IMAGE:$CI_COMMIT_REF_SLUG" || true
     - docker pull "$CI_REGISTRY_IMAGE:main" || true
     - docker build
+        --cache-from "$CI_REGISTRY_IMAGE:$CI_COMMIT_REF_SLUG"
         --cache-from "$CI_REGISTRY_IMAGE:main"
         --build-arg BUILDKIT_INLINE_CACHE=1
         --tag "$CI_REGISTRY_IMAGE:$CI_COMMIT_SHORT_SHA"
-        --tag "$CI_REGISTRY_IMAGE:main"
+        --tag "$CI_REGISTRY_IMAGE:$CI_COMMIT_REF_SLUG"
         .
     - docker push "$CI_REGISTRY_IMAGE:$CI_COMMIT_SHORT_SHA"
-    - docker push "$CI_REGISTRY_IMAGE:main"
-    - echo "Published $CI_REGISTRY_IMAGE:$CI_COMMIT_SHORT_SHA and :main"
+    - docker push "$CI_REGISTRY_IMAGE:$CI_COMMIT_REF_SLUG"
+    - echo "Published $CI_REGISTRY_IMAGE:$CI_COMMIT_SHORT_SHA and :$CI_COMMIT_REF_SLUG"
