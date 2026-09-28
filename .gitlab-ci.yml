@@ -95,15 +95,19 @@ publish_image:
     - if: $CI_PIPELINE_SOURCE == "merge_request_event"
     - if: $CI_COMMIT_BRANCH == $CI_DEFAULT_BRANCH
   variables:
-    # Talk to the dind service over TLS. GitLab shares the generated
-    # certificates between the service and this job through DOCKER_TLS_CERTDIR.
-    DOCKER_HOST: tcp://docker:2376
-    DOCKER_TLS_CERTDIR: "/certs"
-    DOCKER_TLS_VERIFY: "1"
-    DOCKER_CERT_PATH: "/certs/client"
+    # Plain TCP to the dind service. The TLS setup needs the runner to share
+    # dind's generated certificates into this container through a /certs
+    # volume, which these runners do not do -- the job then dies on
+    # "open /certs/client/ca.pem: no such file or directory". Emptying
+    # DOCKER_TLS_CERTDIR tells dind to serve without TLS on 2375 instead.
+    # The port is only reachable from this job's own service network.
+    DOCKER_HOST: tcp://docker:2375
+    DOCKER_TLS_CERTDIR: ""
     # BuildKit, for the inline cache the --cache-from below reads.
     DOCKER_BUILDKIT: "1"
   before_script:
+    # Confirms the daemon is actually reachable before anything depends on it.
+    - docker info
     # CI_REGISTRY_USER / _PASSWORD are injected by GitLab and scoped to this
     # project's registry for the length of the job; nothing needs configuring.
     - echo "$CI_REGISTRY_PASSWORD" | docker login -u "$CI_REGISTRY_USER" --password-stdin "$CI_REGISTRY"
