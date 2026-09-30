@@ -1,4 +1,4 @@
-stages: [quality]
+stages: [quality, publish]
 
 variables:
   PIP_CACHE_DIR: "$CI_PROJECT_DIR/.cache/pip"
@@ -82,3 +82,43 @@ require_approval:
     - apk add --no-cache curl jq
   script:
     - sh scripts/require_approval.sh
+
+# Publishes the API as a container image so other pipelines can run against a
+# real backend without rebuilding it. Publishes the commit tag, which a
+# downstream pipeline can pin to, alongside the ref slug -- ":main" here, and
+# the tag the client pipeline pulls by default.
+#
+# Built with Kaniko rather than docker-in-docker: dind needs a privileged
+# runner and a reachable daemon container, and these runners provide neither
+# ("no route to host" on the dind service). Kaniko builds from the Dockerfile
+# in this job's own container, so there is no daemon and no service to reach.
+publish_image:
+  stage: publish
+  image:
+    name: gcr.io/kaniko-project/executor:v1.23.2-debug
+    # The image's own entrypoint is the executor; clear it so GitLab can run
+    # the script below in a shell.
+    entrypoint: [""]
+  # Default branch only. pulls the :main tag, and an image per MR would fill the registry.
+  rules:
+    - if: $CI_COMMIT_BRANCH == $CI_DEFAULT_BRANCH
+  before_script:
+    # Kaniko reads registry credentials from this file rather than `docker
+    # login`. CI_REGISTRY_USER / _PASSWORD are injected by GitLab and scoped to
+    # this project's registry for the length of the job.
+    - mkdir -p /kaniko/.docker
+    - |
+      cat > /kaniko/.docker/config.json <<EOF
+      {"auths":{"$CI_REGISTRY":{"username":"$CI_REGISTRY_USER","password":"$CI_REGISTRY_PASSWORD"}}}
+      EOF
+  script:
+    # --cache pushes intermediate layers to a side repository, so the pip
+    # install in the Dockerfile is reused until requirements.txt changes.
+    - /kaniko/executor
+        --context "$CI_PROJECT_DIR"
+        --dockerfile "$CI_PROJECT_DIR/Dockerfile"
+        --destination "$CI_REGISTRY_IMAGE:$CI_COMMIT_SHORT_SHA"
+        --destination "$CI_REGISTRY_IMAGE:$CI_COMMIT_REF_SLUG"
+        --cache=true
+        --cache-repo "$CI_REGISTRY_IMAGE/cache"
+    - echo "Published $CI_REGISTRY_IMAGE:$CI_COMMIT_SHORT_SHA and :$CI_COMMIT_REF_SLUG"

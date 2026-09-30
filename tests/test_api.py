@@ -99,7 +99,7 @@ def test_upload_preview_paste_tsv():
 
 
 def test_upload_preview_paste_csv():
-    paste = "Matrikelnr,Name,Program,Semester,Grade\n8888,Ada Lovelace,CS,1,1.0\n"
+    paste = "Matrikelnr,Name,Program,Semester,Grade\n8888,Ada Lovelace,SE Master,1,1.0\n"
     response = client.post(
         "/api/upload/preview/",
         data={
@@ -132,7 +132,7 @@ def test_upload_preview_empty_source():
 
 
 def test_paste_preview_then_confirm():
-    paste = "Matrikelnr\tName\tProgram\tSemester\tGrade\n9999\tValid, User\tCS\t1\t2.0\n"
+    paste = "Matrikelnr\tName\tProgram\tSemester\tGrade\n9999\tValid, User\tSE Master\t1\t2.0\n"
     preview = client.post(
         "/api/upload/preview/",
         data={
@@ -171,7 +171,7 @@ def test_paste_preview_then_confirm():
 
 
 def test_upload_preview_invalid_grade():
-    csv_content = b"Matrikelnr,Name,Program,Semester,Grade\n12345,John Doe,CS,WISE_25,1.0\n"
+    csv_content = b"Matrikelnr,Name,Program,Semester,Grade\n12345,John Doe,SE Master,WISE_25,1.0\n"
     files = {"file": ("test.csv", io.BytesIO(csv_content), "text/csv")}
     data = {
         "course": "TEST101",
@@ -200,7 +200,7 @@ def test_upload_confirm_valid_grade():
                 "student_id": "9999",
                 "first_name": "Valid",
                 "last_name": "User",
-                "program": "CS",
+                "program": "SE Master",
                 "semester": "WISE_25", "mapping": '{"Matrikelnr": "student_id", "Name": "name", "Program": "program", "Grade": "grade"}',
                 "grade": "2.0",
                 "is_valid": True
@@ -209,7 +209,7 @@ def test_upload_confirm_valid_grade():
                 "student_id": "8888",
                 "first_name": "Fail",
                 "last_name": "User",
-                "program": "CS",
+                "program": "SE Master",
                 "semester": "WISE_25", "mapping": '{"Matrikelnr": "student_id", "Name": "name", "Program": "program", "Grade": "grade"}',
                 "grade": "5.0",
                 "is_valid": True
@@ -218,7 +218,7 @@ def test_upload_confirm_valid_grade():
                 "student_id": "7777",
                 "first_name": "Absent",
                 "last_name": "User",
-                "program": "CS",
+                "program": "SE Master",
                 "semester": "WISE_25", "mapping": '{"Matrikelnr": "student_id", "Name": "name", "Program": "program", "Grade": "grade"}',
                 "grade": "5.0",
                 "is_valid": True
@@ -271,7 +271,49 @@ def test_upload_preview_missing_program_is_valid():
     row = response.json()["preview_data"][0]
     assert row["program"] == "Unassigned / Unknown"
     assert "Study Program" not in row["missing_fields"]
+    assert "Study Program" not in row.get("invalid_fields", [])
     assert row["is_valid"] is True
+
+
+def test_upload_preview_unknown_program_is_flagged():
+    """A typed-in Studiengang is shown so it can be fixed from the dropdown."""
+    csv_content = b"Matrikelnr,Name,Program,Semester,Grade\n5556,Typo Program,CS,WISE_25,2.3\n"
+    files = {"file": ("typo_program.csv", io.BytesIO(csv_content), "text/csv")}
+    data = {
+        "course": "TEST101",
+        "courseName": "Test Course",
+        "ects": "6",
+        "semester": "WISE_25",
+        "mapping": PASTE_MAPPING,
+    }
+    response = client.post("/api/upload/preview/", files=files, data=data)
+    assert response.status_code == 200
+    row = response.json()["preview_data"][0]
+    assert row["program"] == "CS"
+    assert "Study Program" not in row["missing_fields"]
+    assert "Study Program" in row["invalid_fields"]
+    assert row["is_valid"] is False
+
+
+def test_upload_confirm_rejects_unknown_program():
+    payload = {
+        "course": "PROG101",
+        "courseName": "Program Course",
+        "ects": "6",
+        "semester": "WISE_25",
+        "records": [
+            {
+                "student_id": "6010",
+                "first_name": "Typo",
+                "last_name": "Program",
+                "program": "Custom Degree",
+                "semester": "WISE_25",
+                "grade": "2.0",
+            }
+        ],
+    }
+    response = client.post("/api/upload/confirm/", json=payload)
+    assert response.status_code == 422
 
 
 def test_upload_confirm_stores_attempt_type_and_placeholder_program():
@@ -286,7 +328,7 @@ def test_upload_confirm_stores_attempt_type_and_placeholder_program():
                 "student_id": "6001",
                 "first_name": "With",
                 "last_name": "Program",
-                "program": "CS",
+                "program": "SE Master",
                 "semester": "WISE_25",
                 "grade": "2.0",
             },
@@ -313,7 +355,7 @@ def test_upload_confirm_stores_attempt_type_and_placeholder_program():
         blank = db.query(models.Student).filter(models.Student.student_id == 6002).first()
         assert blank.program == "Unassigned / Unknown"
         kept = db.query(models.Student).filter(models.Student.student_id == 6001).first()
-        assert kept.program == "CS"
+        assert kept.program == "SE Master"
     finally:
         db.close()
 
@@ -330,7 +372,7 @@ def test_upload_confirm_defaults_attempt_type():
                 "student_id": "6003",
                 "first_name": "Default",
                 "last_name": "Attempt",
-                "program": "CS",
+                "program": "SE Master",
                 "semester": "WISE_25",
                 "grade": "1.7",
             }
@@ -358,7 +400,7 @@ def test_upload_confirm_rejects_unknown_attempt_type():
                 "student_id": "6004",
                 "first_name": "Bad",
                 "last_name": "Attempt",
-                "program": "CS",
+                "program": "SE Master",
                 "semester": "WISE_25",
                 "grade": "1.7",
             }
@@ -380,7 +422,7 @@ def test_transcript_exposes_attempt_type():
                 "student_id": "7301",
                 "first_name": "Trans",
                 "last_name": "Script",
-                "program": "CS",
+                "program": "SE Master",
                 "semester": "WISE_25",
                 "grade": "2.7",
             }
@@ -431,7 +473,7 @@ def test_preview_absence_codes_and_ignores_passed_column():
 
 
 def test_preview_rejects_passed_text_in_the_grade_cell():
-    paste = "Matrikelnr,Name,Program,Semester,Grade\n31010,Ada Lovelace,CS,1,Passed\n"
+    paste = "Matrikelnr,Name,Program,Semester,Grade\n31010,Ada Lovelace,SE Master,1,Passed\n"
     response = client.post(
         "/api/upload/preview/",
         data={
@@ -459,7 +501,7 @@ def test_confirm_persists_absence_outcomes():
                 "student_id": "31021",
                 "first_name": "No",
                 "last_name": "Show",
-                "program": "CS",
+                "program": "SE Master",
                 "semester": "WISE_25",
                 "grade": "NE",
             },
@@ -467,7 +509,7 @@ def test_confirm_persists_absence_outcomes():
                 "student_id": "31022",
                 "first_name": "Med",
                 "last_name": "Note",
-                "program": "CS",
+                "program": "SE Master",
                 "semester": "WISE_25",
                 "grade": "AT",
             },
@@ -497,7 +539,7 @@ def test_confirm_rejects_passed_text_as_a_grade():
                 "student_id": "31030",
                 "first_name": "Label",
                 "last_name": "Only",
-                "program": "CS",
+                "program": "SE Master",
                 "semester": "WISE_25",
                 "grade": "Passed",
             }
@@ -518,7 +560,7 @@ def test_batch_grade_update_ignores_client_passed_flag():
                 "student_id": "31040",
                 "first_name": "Re",
                 "last_name": "Calc",
-                "program": "CS",
+                "program": "SE Master",
                 "semester": "WISE_25",
                 "grade": "5.0",
             }
@@ -543,6 +585,78 @@ def test_batch_grade_update_ignores_client_passed_flag():
     assert updated["outcome"] == "failed"
 
 
+def _import_one_grade(student_id: str, course: str, grade: str) -> dict:
+    payload = {
+        "course": course,
+        "courseName": f"{course} Course",
+        "ects": "6",
+        "semester": "WISE_25",
+        "records": [
+            {
+                "student_id": student_id,
+                "first_name": "Edit",
+                "last_name": "FromCourse",
+                "program": "SE Master",
+                "semester": "WISE_25",
+                "grade": grade,
+            }
+        ],
+    }
+    assert client.post("/api/upload/confirm/", json=payload).status_code == 200
+    return client.get(f"/api/students/{student_id}").json()["transcript"][0]
+
+
+def test_batch_grade_update_accepts_the_same_cells_as_upload():
+    entry = _import_one_grade("31041", "EDIT101", "2.0")
+    response = client.post(
+        "/api/grades/",
+        json=[
+            {
+                "result_id": entry["result_id"],
+                "version": entry["version"],
+                "grade": "NE",
+            }
+        ],
+    )
+    assert response.status_code == 200
+    failed = client.get("/api/students/31041").json()["transcript"][0]
+    assert failed["grade"] == 5.0
+    assert failed["outcome"] == "failed"
+    assert failed["absence_code"] == "NE"
+
+    excused = client.post(
+        "/api/grades/",
+        json=[
+            {
+                "result_id": failed["result_id"],
+                "version": failed["version"],
+                "grade": "AT",
+            }
+        ],
+    )
+    assert excused.status_code == 200
+    sitting = client.get("/api/students/31041").json()["transcript"][0]
+    assert sitting["grade"] is None
+    assert sitting["outcome"] == "excused"
+    assert sitting["absence_code"] == "AT"
+
+
+def test_batch_grade_update_rejects_invalid_grades():
+    entry = _import_one_grade("31042", "EDIT102", "1.7")
+    for grade in ("6.0", "Passed", "", "0.7"):
+        response = client.post(
+            "/api/grades/",
+            json=[
+                {
+                    "result_id": entry["result_id"],
+                    "version": entry["version"],
+                    "grade": grade,
+                }
+            ],
+        )
+        assert response.status_code == 422, grade
+
+
 def test_excused_attempts_are_excluded_from_pass_rate_and_at_risk():
     payload = {
         "course": "EXCUSE101",
@@ -554,7 +668,7 @@ def test_excused_attempts_are_excluded_from_pass_rate_and_at_risk():
                 "student_id": "31051",
                 "first_name": "Pass",
                 "last_name": "One",
-                "program": "CS",
+                "program": "SE Master",
                 "semester": "WISE_25",
                 "grade": "2.0",
             },
@@ -562,7 +676,7 @@ def test_excused_attempts_are_excluded_from_pass_rate_and_at_risk():
                 "student_id": "31052",
                 "first_name": "Fail",
                 "last_name": "One",
-                "program": "CS",
+                "program": "SE Master",
                 "semester": "WISE_25",
                 "grade": "5.0",
             },
@@ -570,7 +684,7 @@ def test_excused_attempts_are_excluded_from_pass_rate_and_at_risk():
                 "student_id": "31053",
                 "first_name": "Med",
                 "last_name": "Note",
-                "program": "CS",
+                "program": "SE Master",
                 "semester": "WISE_25",
                 "grade": "AT",
             },
@@ -578,7 +692,7 @@ def test_excused_attempts_are_excluded_from_pass_rate_and_at_risk():
                 "student_id": "31053",
                 "first_name": "Med",
                 "last_name": "Note",
-                "program": "CS",
+                "program": "SE Master",
                 "semester": "WISE_25",
                 "grade": "5.0",
             },
@@ -586,7 +700,7 @@ def test_excused_attempts_are_excluded_from_pass_rate_and_at_risk():
                 "student_id": "31054",
                 "first_name": "Two",
                 "last_name": "Fails",
-                "program": "CS",
+                "program": "SE Master",
                 "semester": "WISE_25",
                 "grade": "5.0",
             },
@@ -594,7 +708,7 @@ def test_excused_attempts_are_excluded_from_pass_rate_and_at_risk():
                 "student_id": "31054",
                 "first_name": "Two",
                 "last_name": "Fails",
-                "program": "CS",
+                "program": "SE Master",
                 "semester": "WISE_25",
                 "grade": "5.0",
             },
@@ -651,7 +765,7 @@ def test_preview_ignores_course_columns_in_the_file():
 
 def test_preview_ignores_a_mapping_that_targets_a_course_column():
     """A mapping naming a course column is dropped instead of renaming a field onto it."""
-    paste = "Matrikelnr,Name,Program,Semester,Grade,Kursnummer\n41010,Ada Lovelace,CS,1,2.0,4711\n"
+    paste = "Matrikelnr,Name,Program,Semester,Grade,Kursnummer\n41010,Ada Lovelace,SE Master,1,2.0,4711\n"
     response = client.post(
         "/api/upload/preview/",
         data={
@@ -706,6 +820,47 @@ def test_confirm_attaches_records_to_the_active_course_id():
     assert courses[0]["total_attempts"] == 1
 
 
+def test_course_without_submissions_reports_zeros_until_the_first_one_arrives():
+    """The course page derives its "No submissions yet" state from `marks`, so an
+    empty course must return an empty list -- without dividing by zero -- until
+    the first upload lands."""
+    db = TestingSessionLocal()
+    db.add(models.Course(course_id=3546, course_name="Empty Course"))
+    db.commit()
+    db.close()
+
+    empty = client.get("/api/courses/").json()[0]
+    assert empty["total_attempts"] == 0
+    assert empty["marks"] == []
+    assert empty["pass_rate"] == 0
+    assert empty["avg_grade"] == 0
+    assert client.get("/api/stats/").status_code == 200
+
+    payload = {
+        "courseId": 3546,
+        "courseName": "Empty Course",
+        "ects": "6",
+        "semester": "WISE_25",
+        "attemptType": "Exam 1",
+        "records": [
+            {
+                "student_id": "41021",
+                "first_name": "Lena",
+                "last_name": "Schneider",
+                "program": "SE Master",
+                "semester": "WISE_25",
+                "grade": "1.7",
+            }
+        ],
+    }
+    assert client.post("/api/upload/confirm/", json=payload).status_code == 200
+
+    first = client.get("/api/courses/").json()[0]
+    assert len(first["marks"]) == 1
+    assert first["total_attempts"] == 1
+    assert first["pass_rate"] == 100.0
+
+
 def test_confirm_rejects_an_unknown_course_id():
     payload = {
         "courseId": 999999,
@@ -717,7 +872,7 @@ def test_confirm_rejects_an_unknown_course_id():
                 "student_id": "41030",
                 "first_name": "No",
                 "last_name": "Course",
-                "program": "CS",
+                "program": "SE Master",
                 "semester": "WISE_25",
                 "grade": "2.0",
             }
@@ -742,7 +897,7 @@ def test_confirm_without_a_course_id_still_matches_by_name():
                 "student_id": "41040",
                 "first_name": "Stand",
                 "last_name": "Alone",
-                "program": "CS",
+                "program": "SE Master",
                 "semester": "WISE_25",
                 "grade": "2.0",
             }
