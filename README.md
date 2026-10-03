@@ -187,6 +187,19 @@ PostgreSQL instance is needed.
 running server. They are intentionally not named `test_*.py` so pytest does not
 execute them during collection; see `tests/smoke/README.md`.
 
+### Pre-commit hook
+
+`.githooks/pre-commit` runs the pipeline's `quality` jobs (duplication,
+complexity, unit tests) with the same commands and coverage floor. It checks
+the staged files only, so unstaged edits can't make it pass. It uses `.venv`
+(set `PYTHON` to use another interpreter) and needs `npx` for the duplication
+scan. It doesn't run the approval check or the image publish. Enable it once
+per clone, and skip it once with `git commit --no-verify`:
+
+```bash
+git config core.hooksPath .githooks
+```
+
 ## Authentication
 
 Every route that carries course or student data requires a signed-in user. The
