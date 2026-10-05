@@ -22,6 +22,12 @@ def get_courses(db: Session = Depends(get_db)):
     return course_service.get_all_courses(db)
 
 
+@router.get("/api/courses/{course_id}", summary="Get course details by ID")
+def get_course_details(course_id: int, db: Session = Depends(get_db)):
+    """Retrieves a single course by its ID alongside pass rates, average grades, and marks."""
+    return course_service.get_course_details(db, course_id)
+
+
 @router.post(
     "/api/courses/",
     status_code=status.HTTP_201_CREATED,

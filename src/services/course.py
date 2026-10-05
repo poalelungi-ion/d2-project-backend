@@ -16,54 +16,68 @@ from src.services.grade_outcome import counted_attempts, mean_grade, result_outc
 from src.services.semester import semester_sort_key
 
 
+def format_course_data(c: Course) -> dict:
+    """
+    Serializes a Course entity with aggregated pass rates, mean grades, and mark details.
+    """
+    exams = c.exams
+    results = []
+    marks_detailed = []
+    semesters = set()
+    for e in exams:
+        semesters.add(e.semester)
+        results.extend(e.results)
+        for r in e.results:
+            marks_detailed.append({
+                "result_id": r.result_id,
+                "student_id": r.student.student_id if r.student else None,
+                "student_name": r.student.name if r.student else "Unknown",
+                "program": r.student.program if r.student else "Unknown",
+                "semester": e.semester,
+                "grade": r.grade,
+                "attempt_type": getattr(r, "attempt_type", "Other"),
+                **result_outcome_fields(r),
+                "version": r.version,
+            })
+
+    total = len(results)
+    graded = counted_attempts(results)
+    passed_results = [r for r in graded if r.passed]
+    passed = len(passed_results)
+    avg_grade = mean_grade(passed_results)
+    latest_semester = sorted(list(semesters), key=semester_sort_key)[-1] if semesters else "N/A"
+
+    return {
+        "course_id": c.course_id,
+        "course_name": c.course_name,
+        "assigned_professor": getattr(c, "professor", "Not Assigned"),
+        "semester": c.semester if getattr(c, "semester", None) else latest_semester,
+        "study_program": getattr(c, "study_program", "Not Assigned"),
+        "total_attempts": total,
+        "pass_rate": round((passed / len(graded) * 100), 1) if graded else 0,
+        "avg_grade": round(avg_grade, 2),
+        "is_archived": c.is_archived,
+        "version": c.version,
+        "marks": marks_detailed,
+    }
+
+
 def get_all_courses(db: Session):
     """
     Retrieves all courses alongside aggregated pass rates and average grades.
     """
     courses = db.query(Course).all()
-    data = []
-    for c in courses:
-        exams = c.exams
-        results = []
-        marks_detailed = []
-        semesters = set()
-        for e in exams:
-            semesters.add(e.semester)
-            results.extend(e.results)
-            for r in e.results:
-                marks_detailed.append({
-                    "result_id": r.result_id,
-                    "student_id": r.student.student_id if r.student else None,
-                    "student_name": r.student.name if r.student else "Unknown",
-                    "program": r.student.program if r.student else "Unknown",
-                    "semester": e.semester,
-                    "grade": r.grade,
-                    "attempt_type": getattr(r, "attempt_type", "Other"),
-                    **result_outcome_fields(r),
-                    "version": r.version,
-                })
+    return [format_course_data(c) for c in courses]
 
-        total = len(results)
-        graded = counted_attempts(results)
-        passed_results = [r for r in graded if r.passed]
-        passed = len(passed_results)
-        avg_grade = mean_grade(passed_results)
-        latest_semester = sorted(list(semesters), key=semester_sort_key)[-1] if semesters else "N/A"
 
-        data.append({
-            "course_id": c.course_id,
-            "course_name": c.course_name,
-            "assigned_professor": getattr(c, "professor", "Not Assigned"),
-            "semester": c.semester if getattr(c, "semester", None) else latest_semester,
-            "study_program": getattr(c, "study_program", "Not Assigned"),
-            "total_attempts": total,
-            "pass_rate": round((passed / len(graded) * 100), 1) if graded else 0,
-            "avg_grade": round(avg_grade, 2),
-            "is_archived": c.is_archived,
-            "version": c.version,
-            "marks": marks_detailed,
-        })
-    return data
+def get_course_details(db: Session, course_id: int):
+    """
+    Retrieves a single course by its ID alongside aggregated performance metrics and mark roster.
+    """
+    course = db.query(Course).filter(Course.course_id == course_id).first()
+    if not course:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Course not found")
+    return format_course_data(course)
 
 
 def create_course(db: Session, course_dto: CourseCreate):
