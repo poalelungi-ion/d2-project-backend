@@ -22,6 +22,10 @@ def get_courses(db: Session = Depends(get_db)):
     return course_service.get_all_courses(db)
 
 
+# [Ticket #95647 - View course details: Data Retrieval & Presentation]
+# Endpoint to retrieve detailed course dashboard payload by course_id.
+# Queries backend for core metadata (Course Name, ID, Semester, Study Program)
+# and summary metrics. Returns HTTP 404 when course_id does not exist.
 @router.get("/api/courses/{course_id}", summary="Get course details by ID")
 def get_course_details(course_id: int, db: Session = Depends(get_db)):
     """Retrieves a single course by its ID alongside pass rates, average grades, and marks."""

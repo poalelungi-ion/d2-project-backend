@@ -70,6 +70,10 @@ def get_all_courses(db: Session):
     return [format_course_data(c) for c in courses]
 
 
+# [Ticket #95647 - View course details: Data Retrieval & 404 Error Handling]
+# Fetches the course entity by ID and compiles core metadata (course_name,
+# course_id, semester, study_program) along with summary statistics and roster marks.
+# Raises HTTP 404 if the requested Course ID does not exist in the database.
 def get_course_details(db: Session, course_id: int):
     """
     Retrieves a single course by its ID alongside aggregated performance metrics and mark roster.
