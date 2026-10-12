@@ -942,6 +942,63 @@ def test_get_course_details_not_found():
     assert res.json()["detail"] == "Course not found"
 
 
+def test_student_profile_creation_and_conflict_handling_97930():
+    """User Story #97930 AC2 & AC4: Profile Creation & 409 Conflict on duplicate ID."""
+    student_payload = {
+        "student_id": 97930,
+        "name": "Alan Turing",
+        "program": "SE Master",
+        "status": "active",
+    }
+    # 1. Create student
+    res = client.post("/api/students/", json=student_payload)
+    assert res.status_code == 201
+    assert res.json()["student_id"] == 97930
+
+    # 2. Attempt duplicate student creation -> 409 Conflict
+    dup_res = client.post("/api/students/", json=student_payload)
+    assert dup_res.status_code == 409
+    assert dup_res.json()["detail"] == "Student ID already exists"
+
+
+def test_student_profile_update_and_optimistic_locking_97930():
+    """User Story #97930 AC3 & AC4: Profile Editing & Conflict Handling."""
+    student_payload = {
+        "student_id": 97931,
+        "name": "Ada Lovelace",
+        "program": "SE Master",
+        "status": "active",
+    }
+    create_res = client.post("/api/students/", json=student_payload)
+    assert create_res.status_code == 201
+
+    # Fetch student details
+    details = client.get("/api/students/97931").json()
+    assert details["name"] == "Ada Lovelace"
+    version = details["version"]
+
+    # 1. Successful edit
+    update_payload = {
+        "new_student_id": 97931,
+        "name": "Ada King Lovelace",
+        "program": "Data Science Master",
+        "status": "graduated",
+        "version": version,
+    }
+    update_res = client.put("/api/students/97931", json=update_payload)
+    assert update_res.status_code == 200
+
+    # Verify updated values
+    updated_details = client.get("/api/students/97931").json()
+    assert updated_details["name"] == "Ada King Lovelace"
+    assert updated_details["program"] == "Data Science Master"
+    assert updated_details["status"] == "graduated"
+
+    # 2. Conflict on stale version (concurrency)
+    stale_res = client.put("/api/students/97931", json=update_payload)
+    assert stale_res.status_code == 409
+
+
 def test_update_course_without_professor_field():
     """Task #99886: professor attribute is safely omitted without validation errors."""
     create_payload = {
@@ -971,4 +1028,5 @@ def test_update_course_without_professor_field():
     target_updated = next(c for c in courses_updated if c["course_id"] == 99886)
     assert target_updated["course_name"] == "Course 99886 Updated"
     assert target_updated["assigned_professor"] == "Prof. Smith"
+
 
