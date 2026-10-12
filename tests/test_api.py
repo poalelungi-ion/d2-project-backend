@@ -906,3 +906,35 @@ def test_confirm_without_a_course_id_still_matches_by_name():
     assert client.post("/api/upload/confirm/", json=payload).status_code == 200
     courses = client.get("/api/courses/").json()
     assert [c["course_name"] for c in courses] == ["Standalone Course"]
+
+
+def test_update_course_without_professor_field():
+    """Task #99886: professor attribute is safely omitted without validation errors."""
+    create_payload = {
+        "course_id": 99886,
+        "course_name": "Course 99886",
+        "semester": "WISE_25",
+        "professor": "Prof. Smith",
+    }
+    res = client.post("/api/courses/", json=create_payload)
+    assert res.status_code == 201
+
+    courses = client.get("/api/courses/").json()
+    target = next(c for c in courses if c["course_id"] == 99886)
+    assert target["assigned_professor"] == "Prof. Smith"
+
+    # Update course omitting the professor attribute completely
+    update_payload = {
+        "new_course_id": 99886,
+        "course_name": "Course 99886 Updated",
+        "semester": "SOSE_26",
+        "version": target["version"],
+    }
+    update_res = client.put("/api/courses/99886", json=update_payload)
+    assert update_res.status_code == 200
+
+    courses_updated = client.get("/api/courses/").json()
+    target_updated = next(c for c in courses_updated if c["course_id"] == 99886)
+    assert target_updated["course_name"] == "Course 99886 Updated"
+    assert target_updated["assigned_professor"] == "Prof. Smith"
+
