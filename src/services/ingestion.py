@@ -7,11 +7,11 @@ import io
 import json
 from typing import Optional
 import pandas as pd
-from fastapi import HTTPException, UploadFile, status
+from fastapi import HTTPException, Response, UploadFile, status
 from sqlalchemy.orm import Session
 
 from src.database.models import Course, Exam, ExamResult, Student
-from src.lib.study_program import UNASSIGNED_PROGRAM, is_known_program
+from src.lib.study_program import UNASSIGNED_PROGRAM, is_known_program, normalize_study_program
 from src.router.dto import UploadConfirmRequest
 from src.services.grade_outcome import (
     UnrecognizedGrade,
@@ -82,13 +82,30 @@ def _read_paste(text: str) -> pd.DataFrame:
 
 
 def _read_file(filename: str, contents: bytes) -> pd.DataFrame:
-    if filename.endswith(".csv"):
-        return pd.read_csv(io.BytesIO(contents))
-    if filename.endswith(".tsv"):
-        return pd.read_csv(io.BytesIO(contents), sep="\t")
-    if filename.endswith(".ods"):
-        return pd.read_excel(io.BytesIO(contents), engine="odf")
-    return pd.read_excel(io.BytesIO(contents))
+    if not contents or len(contents) == 0:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="The uploaded file is empty (0 bytes). Please select or upload a valid spreadsheet with student grades.",
+        )
+    try:
+        if filename.endswith(".csv"):
+            return pd.read_csv(io.BytesIO(contents))
+        if filename.endswith(".tsv"):
+            return pd.read_csv(io.BytesIO(contents), sep="\t")
+        if filename.endswith(".ods"):
+            return pd.read_excel(io.BytesIO(contents), engine="odf")
+        if filename.endswith(".xlsx"):
+            return pd.read_excel(io.BytesIO(contents), engine="openpyxl")
+        if filename.endswith(".xls"):
+            return pd.read_excel(io.BytesIO(contents))
+        return pd.read_excel(io.BytesIO(contents), engine="openpyxl")
+    except HTTPException:
+        raise
+    except Exception as e:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=f"Could not parse spreadsheet file: {str(e)}",
+        )
 
 
 async def preview_upload(
@@ -166,9 +183,9 @@ async def preview_upload(
                 if str(record[k]).lower() == "nan":
                     record[k] = ""
 
-            # Fill the placeholder here rather than only on save, so the review
-            # grid shows exactly what will be written to the database.
-            record["program"] = record["program"].strip() or UNASSIGNED_PROGRAM
+            # Fill the placeholder or normalize common abbreviations here so the review
+            # grid shows clean canonical values and resolves aliases.
+            record["program"] = normalize_study_program(record["program"])
 
             missing = []
             invalid = []
@@ -201,8 +218,10 @@ async def preview_upload(
     except HTTPException:
         raise
     except Exception as e:
-        status_code = status.HTTP_400_BAD_REQUEST if source_label == "pasted data" else status.HTTP_500_INTERNAL_SERVER_ERROR
-        raise HTTPException(status_code=status_code, detail=f"Could not parse {source_label}: {str(e)}")
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=f"Could not parse {source_label}: {str(e)}",
+        )
 
 
 def resolve_course(db: Session, req: UploadConfirmRequest) -> Course:
@@ -308,3 +327,19 @@ def confirm_upload(db: Session, req: UploadConfirmRequest):
     except Exception as e:
         db.rollback()
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(e))
+
+
+def convert_paste_to_excel(paste_text: str, filename: Optional[str] = "pasted_table.xlsx") -> Response:
+    """Converts a pasted tabular string into an openpyxl .xlsx file stream."""
+    df = _read_paste(paste_text)
+    out = io.BytesIO()
+    with pd.ExcelWriter(out, engine="openpyxl") as writer:
+        df.to_excel(writer, index=False, sheet_name="Grades")
+    excel_bytes = out.getvalue()
+    safe_name = filename if filename and filename.endswith(".xlsx") else f"{filename or 'pasted_table'}.xlsx"
+    return Response(
+        content=excel_bytes,
+        media_type="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+        headers={"Content-Disposition": f'attachment; filename="{safe_name}"'},
+    )
+

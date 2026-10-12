@@ -35,3 +35,13 @@ async def upload_file_preview(
 async def upload_confirm(req: UploadConfirmRequest, db: Session = Depends(get_db)):
     """Permanently archives vetted exam records using an atomic database transaction."""
     return ingestion_service.confirm_upload(db, req)
+
+
+@router.post("/api/upload/paste-to-excel/", summary="Convert pasted tabular text to Excel (.xlsx) file")
+async def paste_to_excel(
+    paste: str = Form(...),
+    filename: Optional[str] = Form("pasted_table.xlsx"),
+):
+    """Parses tabular paste text and returns a downloadable/importable Excel (.xlsx) spreadsheet."""
+    return ingestion_service.convert_paste_to_excel(paste, filename)
+
