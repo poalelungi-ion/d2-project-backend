@@ -12,7 +12,7 @@ class CourseCreate(BaseModel):
     course_name: str
     semester: Optional[str] = None
     study_program: OptionalStudyProgram = None
-    professor: str = "Not Assigned"
+    professor: Optional[str] = "Not Assigned"
 
 
 class CourseUpdate(BaseModel):
@@ -20,7 +20,7 @@ class CourseUpdate(BaseModel):
     course_name: str
     semester: Optional[str] = None
     study_program: OptionalStudyProgram = None
-    professor: str = "Not Assigned"
+    professor: Optional[str] = None
     version: int
 
 
