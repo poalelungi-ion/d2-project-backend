@@ -906,3 +906,38 @@ def test_confirm_without_a_course_id_still_matches_by_name():
     assert client.post("/api/upload/confirm/", json=payload).status_code == 200
     courses = client.get("/api/courses/").json()
     assert [c["course_name"] for c in courses] == ["Standalone Course"]
+
+
+def test_get_course_details_success():
+    """Retrieves full course metadata, summary statistics, and marks for an existing course."""
+    create_payload = {
+        "course_id": 95647,
+        "course_name": "Cloud Native Architecture",
+        "semester": "SOSE_26",
+        "study_program": "SE Master",
+        "professor": "Dr. Architect",
+    }
+    res = client.post("/api/courses/", json=create_payload)
+    assert res.status_code == 201
+
+    res = client.get("/api/courses/95647")
+    assert res.status_code == 200
+    data = res.json()
+    assert data["course_id"] == 95647
+    assert data["course_name"] == "Cloud Native Architecture"
+    assert data["semester"] == "SOSE_26"
+    assert data["study_program"] == "SE Master"
+    assert data["assigned_professor"] == "Dr. Architect"
+    assert data["total_attempts"] == 0
+    assert data["pass_rate"] == 0
+    assert data["avg_grade"] == 0
+    assert data["is_archived"] is False
+    assert data["marks"] == []
+
+
+def test_get_course_details_not_found():
+    """Returns 404 with error message when course ID does not exist."""
+    res = client.get("/api/courses/99999999")
+    assert res.status_code == 404
+    assert res.json()["detail"] == "Course not found"
+
