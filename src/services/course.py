@@ -138,7 +138,8 @@ def update_course(db: Session, course_id: int, course_dto: CourseUpdate):
     course.course_name = course_dto.course_name
     course.semester = course_dto.semester
     course.study_program = course_dto.study_program
-    course.professor = course_dto.professor
+    if course_dto.professor is not None:
+        course.professor = course_dto.professor
 
     try:
         db.commit()
