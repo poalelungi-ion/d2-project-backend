@@ -1,0 +1,60 @@
+#!/usr/bin/env bash
+# Runs the `quality` stage of .gitlab-ci.yml -- duplication, complexity and unit tests 
+#
+# Enable once per clone with `git config core.hooksPath .githooks`. Skip once
+# with `git commit --no-verify`. Uses .venv unless PYTHON says otherwise.
+set -uo pipefail
+
+root="$(git rev-parse --show-toplevel)"
+python="${PYTHON:-$root/.venv/bin/python}"
+if [ ! -x "$python" ]; then
+  echo "pre-commit: no Python at $python. Create .venv with requirements.txt and"
+  echo "requirements-dev.txt installed, or point PYTHON at an interpreter that has them."
+  exit 1
+fi
+
+# Check the staged snapshot rather than the working tree: unstaged edits and
+# files never `git add`ed don't reach CI, so they must not make a gate pass.
+snapshot="$(mktemp -d)"
+trap 'rm -rf "$snapshot"' EXIT
+git checkout-index --all --prefix="$snapshot/"
+cd "$snapshot" || exit 1
+
+# Read the floor from CI so raising it there raises it here too.
+coverage_floor="$(sed -n 's/^ *COVERAGE_FLOOR: *"\([0-9.]*\)".*/\1/p' .gitlab-ci.yml)"
+
+duplication() {
+  npx --yes jscpd@5 . --reporters console,html,codeclimate,json
+}
+
+complexity() {
+  "$python" -m ruff check --config ruff.ci.toml --output-format concise src || true
+  "$python" -m ruff check --config ruff.ci.toml --output-format gitlab src > gl-code-quality-report.json || true
+  "$python" scripts/complexity_summary.py gl-code-quality-report.json
+}
+
+unit_tests() {
+  "$python" -m pytest --junitxml=junit.xml --cov=src --cov-branch \
+    --cov-report=term --cov-report=xml:coverage.xml --cov-report=json:coverage.json || true
+  COVERAGE_FLOOR="$coverage_floor" "$python" scripts/test_summary.py junit.xml coverage.json
+}
+
+failed=()
+for gate in duplication complexity unit_tests; do
+  printf '%-12s ' "$gate"
+  if "$gate" > "$gate.log" 2>&1; then
+    echo "passed"
+  else
+    echo "FAILED"
+    failed+=("$gate")
+  fi
+done
+
+if [ ${#failed[@]} -gt 0 ]; then
+  for gate in "${failed[@]}"; do
+    printf '\n===== %s =====\n' "$gate"
+    tail -n 60 "$gate.log"
+  done
+  printf '\npre-commit: %s would fail in the pipeline. Commit aborted.\n' "${failed[*]}"
+  exit 1
+fi
