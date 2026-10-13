@@ -1030,3 +1030,16 @@ def test_update_course_without_professor_field():
     assert target_updated["assigned_professor"] == "Prof. Smith"
 
 
+def test_convert_paste_to_excel():
+    paste = "Matrikelnr\tName\tProgram\tSemester\tGrade\n9999\tValid, User\tSE Master\t1\t2.0\n"
+    res = client.post("/api/upload/paste-to-excel/", data={"paste": paste, "filename": "test_output.xlsx"})
+    assert res.status_code == 200
+    assert res.headers["content-type"] == "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+    # Verify openpyxl can read the returned bytes
+    import io, pandas as pd
+    df = pd.read_excel(io.BytesIO(res.content), engine="openpyxl")
+    assert len(df) == 1
+    assert df.iloc[0]["Matrikelnr"] == 9999
+
+
+
