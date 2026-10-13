@@ -18,6 +18,7 @@ StudyProgram = Literal[
     "Development Project",
     "IMIT Bachelor",
     "IMIT Master",
+    "Informatik",
     "Research Methods",
     "SE Master",
     "Wirtschaftsinformatik Master",
@@ -40,7 +41,15 @@ PROGRAM_ALIASES = {
     "software engineering": "SE Master",
     "software engineering master": "SE Master",
 
-    # AINF
+    # Informatik & AINF
+    "informatik": "Informatik",
+    "inf": "Informatik",
+    "b.sc. informatik": "Angewandte Informatik Bachelor",
+    "bsc informatik": "Angewandte Informatik Bachelor",
+    "informatik bachelor": "Angewandte Informatik Bachelor",
+    "m.sc. informatik": "Angewandte Informatik Master",
+    "msc informatik": "Angewandte Informatik Master",
+    "informatik master": "Angewandte Informatik Master",
     "m.sc. ainf": "Angewandte Informatik Master",
     "m.sc. angewandte informatik": "Angewandte Informatik Master",
     "msc ainf": "Angewandte Informatik Master",
