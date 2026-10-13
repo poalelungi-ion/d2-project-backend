@@ -119,6 +119,7 @@ publish_image:
         --dockerfile "$CI_PROJECT_DIR/Dockerfile"
         --destination "$CI_REGISTRY_IMAGE:$CI_COMMIT_SHORT_SHA"
         --destination "$CI_REGISTRY_IMAGE:$CI_COMMIT_REF_SLUG"
+        --destination "$CI_REGISTRY_IMAGE:latest"
         --cache=true
         --cache-repo "$CI_REGISTRY_IMAGE/cache"
-    - echo "Published $CI_REGISTRY_IMAGE:$CI_COMMIT_SHORT_SHA and :$CI_COMMIT_REF_SLUG"
+    - echo "Published $CI_REGISTRY_IMAGE:$CI_COMMIT_SHORT_SHA, :$CI_COMMIT_REF_SLUG and :latest"
