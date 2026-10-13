@@ -13,6 +13,8 @@ class GradeUpdate(BaseModel):
     grade: Union[float, str]
     # Ignored if sent. Pass/fail is always recomputed from the grade cell.
     passed: Optional[bool] = None
+    attempt_type: Optional[str] = None
+    semester: Optional[str] = None
 
     @field_validator("grade", mode="before")
     @classmethod

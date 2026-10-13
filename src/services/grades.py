@@ -7,7 +7,7 @@ from fastapi import HTTPException, status
 from sqlalchemy.orm import Session
 from sqlalchemy.orm.exc import StaleDataError
 
-from src.database.models import ExamResult
+from src.database.models import Exam, ExamResult
 from src.router.dto import GradeUpdate
 from src.services.grade_outcome import evaluate_grade, result_outcome_fields
 
@@ -39,6 +39,18 @@ def update_grades_batch(db: Session, updates: List[GradeUpdate]):
             result.grade = verdict.grade
             result.passed = verdict.passed
             result.absence_code = verdict.absence_code
+            if u.attempt_type is not None:
+                result.attempt_type = u.attempt_type
+            if u.semester and result.exam and result.exam.semester != u.semester:
+                target_exam = db.query(Exam).filter(
+                    Exam.course_id == result.exam.course_id,
+                    Exam.semester == u.semester,
+                ).first()
+                if not target_exam:
+                    target_exam = Exam(course_id=result.exam.course_id, semester=u.semester)
+                    db.add(target_exam)
+                    db.flush()
+                result.exam_id = target_exam.exam_id
 
     try:
         db.commit()
