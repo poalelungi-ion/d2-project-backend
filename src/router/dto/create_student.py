@@ -2,7 +2,7 @@
 Student and Grading Data Transfer Objects (DTOs).
 Validates inputs for student creation, profile editing, status updates, and grade recording.
 """
-from typing import Optional
+from typing import Optional, Union
 from pydantic import BaseModel, Field
 
 from src.lib.study_program import NamedStudyProgram
@@ -31,4 +31,5 @@ class StudentStatusUpdate(BaseModel):
 class AddGradeRequest(BaseModel):
     course_id: int
     semester: str
-    grade: float = Field(..., ge=1.0, le=5.0)
+    grade: Union[float, str]
+    attempt_type: Optional[str] = "Exam 1"

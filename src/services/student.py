@@ -198,22 +198,21 @@ def add_student_grade(db: Session, student_id: int, request: AddGradeRequest):
             db.flush()
 
         verdict = evaluate_grade(request.grade)
+        attempt_type = request.attempt_type or "Exam 1"
         existing = (
             db.query(ExamResult)
-            .join(Exam)
-            .filter(ExamResult.student_id == student.student_id, Exam.course_id == exam.course_id)
+            .filter(
+                ExamResult.student_id == student.student_id,
+                ExamResult.exam_id == exam.exam_id,
+                ExamResult.attempt_type == attempt_type,
+            )
             .first()
         )
 
         if existing:
-            # A later numeric grade replaces an excused sitting, or a better mark.
-            if existing.grade is None or (
-                verdict.grade is not None and verdict.grade < existing.grade
-            ):
-                existing.grade = verdict.grade
-                existing.passed = verdict.passed
-                existing.absence_code = verdict.absence_code
-                existing.exam_id = exam.exam_id
+            existing.grade = verdict.grade
+            existing.passed = verdict.passed
+            existing.absence_code = verdict.absence_code
         else:
             res = ExamResult(
                 student_id=student.student_id,
@@ -221,6 +220,7 @@ def add_student_grade(db: Session, student_id: int, request: AddGradeRequest):
                 grade=verdict.grade,
                 passed=verdict.passed,
                 absence_code=verdict.absence_code,
+                attempt_type=attempt_type,
             )
             db.add(res)
 

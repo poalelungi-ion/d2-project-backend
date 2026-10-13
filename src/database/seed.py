@@ -93,29 +93,37 @@ def seed_db():
         db.add_all(exams)
         db.commit()
 
-        results_dict = {}
+        results = []
         for s in students:
             sampled_exams = random.sample(exams, random.randint(8, 12))
             for e in sampled_exams:
-                grade = random.choices(
+                # 1st attempt: Exam 1
+                grade1 = random.choices(
                     [1.0, 1.3, 1.7, 2.0, 2.3, 2.7, 3.0, 3.3, 3.7, 4.0, 5.0],
-                    weights=[5, 10, 15, 20, 15, 10, 5, 5, 5, 5, 15], k=1
+                    weights=[5, 10, 15, 20, 15, 10, 5, 5, 5, 5, 20], k=1
                 )[0]
-                key = (s.student_id, e.course_id)
-                if key not in results_dict or grade < results_dict[key]['grade']:
-                    results_dict[key] = {'exam_id': e.exam_id, 'grade': grade, 'passed': grade <= 4.0}
+                results.append(ExamResult(
+                    student_id=s.student_id,
+                    exam_id=e.exam_id,
+                    grade=grade1,
+                    passed=grade1 <= 4.0,
+                    attempt_type="Exam 1",
+                ))
 
-                if grade > 4.0:
-                    retry_exam = next((ex for ex in exams if ex.course_id == e.course_id and ex.exam_id != e.exam_id), None)
-                    if retry_exam:
-                        retry_grade = random.choices([1.0, 1.3, 1.7, 2.0, 2.3, 2.7, 3.0, 3.3, 3.7, 4.0], weights=[5,10,15,20,15,10,10,5,5,5], k=1)[0]
-                        if retry_grade < results_dict[key]['grade']:
-                            results_dict[key] = {'exam_id': retry_exam.exam_id, 'grade': retry_grade, 'passed': True}
+                # If failed (5.0) or selected for retake: add 2nd attempt (Exam 2)
+                if grade1 > 4.0 or random.random() < 0.35:
+                    grade2 = random.choices(
+                        [1.3, 1.7, 2.0, 2.3, 2.7, 3.0, 3.3, 3.7, 4.0, 5.0],
+                        weights=[10, 15, 25, 20, 10, 5, 5, 5, 3, 2], k=1
+                    )[0]
+                    results.append(ExamResult(
+                        student_id=s.student_id,
+                        exam_id=e.exam_id,
+                        grade=grade2,
+                        passed=grade2 <= 4.0,
+                        attempt_type="Exam 2",
+                    ))
 
-        results = [
-            ExamResult(student_id=k[0], exam_id=v['exam_id'], grade=v['grade'], passed=v['passed'])
-            for k, v in results_dict.items()
-        ]
         db.add_all(results)
         db.commit()
     except Exception as e:
