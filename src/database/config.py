@@ -64,7 +64,7 @@ DEBUG = os.getenv("DEBUG", "true").lower() == "true"
 DEV_CORS_ORIGINS = ["http://localhost:5173", "http://127.0.0.1:5173"]
 
 _configured_origins = [
-    origin.strip()
+    origin.strip().rstrip("/")
     for origin in os.getenv("CORS_ORIGINS", ",".join(DEV_CORS_ORIGINS)).split(",")
     if origin.strip()
 ]
