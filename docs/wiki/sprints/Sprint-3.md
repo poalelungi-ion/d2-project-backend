@@ -1,9 +1,12 @@
-# Sprint 3: Course Drive, Advanced Exam Analytics & Deployment Hardening
+# D2-Project: Sprint 3 (Course Drive, Advanced Exam Analytics & Deployment Hardening)
 
+* **Official Kanban Board:** `D2-Project: Sprint 3` *(Created on: 09/18/2026 06:16 PM)*
 * **Sprint Timeline:** `September 15, 2026 – September 29, 2026` (`15.09.2026 – 29.09.2026`)
-* **Sprint Status:** Active
+* **Sprint Status:** Closed / Beta Stage Delivered
 * **Total Story Points:** 69 Points
 * **Total Work Items:** 27 Items (19 User Stories, 8 Technical Tasks)
+* **Git Release Branch:** [`release/sprint-3-v0.3.0-beta`](https://gitlab.gwdg.de/sudarshan.bashyal/d2-project-client/-/tree/release/sprint-3-v0.3.0-beta)
+* **Git Release Tag:** [`v0.3.0-beta`](https://gitlab.gwdg.de/sudarshan.bashyal/d2-project-client/-/tags/v0.3.0-beta) (`release-sprint-3-v0.3.0-beta`)
 * **Target Delivery Release:** `v0.3.0-beta` (Beta Stage Milestone - Latest)
 
 ---

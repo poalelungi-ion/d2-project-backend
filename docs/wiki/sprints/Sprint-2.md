@@ -1,7 +1,10 @@
-# Sprint 2: Core Analytics, Attempts & Absence Normalization
+# D2-Project: Sprint 2 (Core Analytics, Attempts & Absence Normalization)
 
+* **Official Kanban Board:** `D2-Project: Sprint 2` *(Created on: 09/03/2026 05:36 PM)*
 * **Sprint Timeline:** `September 01, 2026 – September 14, 2026` (`01.09.2026 – 14.09.2026`)
 * **Sprint Status:** Closed / Delivered
+* **Git Release Branch:** [`release/sprint-2-v0.2.0-alpha`](https://gitlab.gwdg.de/sudarshan.bashyal/d2-project-client/-/tree/release/sprint-2-v0.2.0-alpha)
+* **Git Release Tag:** [`v0.2.0-alpha`](https://gitlab.gwdg.de/sudarshan.bashyal/d2-project-client/-/tags/v0.2.0-alpha) (`release-sprint-2-v0.2.0-alpha`)
 * **Target Delivery Release:** `v0.2.0-alpha` (Release Alpha 2)
 
 ---
