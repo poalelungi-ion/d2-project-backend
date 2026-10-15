@@ -31,6 +31,13 @@ The system allows university lecturers and academic staff to ingest heterogeneou
 
 ---
 
+### 4. Developer Onboarding, Traceability & Handover
+* **[Developer Onboarding Guide](Onboarding-Guide.md):** Day-1 setup, native & Docker development environments, coding conventions, and verification steps.
+* **[Full Requirements & Code Traceability Matrix](Traceability-Matrix.md):** End-to-end mapping from agile User Stories & Tasks to Backend code, Frontend views, and automated tests.
+* **[Project Handover & Delivery Checklist](Handover-Checklist.md):** Package verification, test accounts, database backup & restoration, and troubleshooting FAQ.
+
+---
+
 ## 👥 Core Project Team (Group D2)
 
 | Name | Role | Mail |
