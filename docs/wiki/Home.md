@@ -1,52 +1,45 @@
-# Study Progress Analysis (SPA) System – Project Wiki
+# Study Progress Analysis (SPA) – Backend Service Wiki
 
-Welcome to the central documentation wiki for the **Study Progress Analysis (SPA)** project developed at **Stiftung Universität Hildesheim (Software Systems Engineering - SSE)**.
+Welcome to the backend engineering documentation for the **Study Progress Analysis (SPA)** platform developed at **Stiftung Universität Hildesheim (Software Systems Engineering - SSE)**.
 
-The system allows university lecturers and academic staff to ingest heterogeneous exam spreadsheets (`.xlsx`, `.csv`, `.tsv`, `.ods`), review and validate student records with zero data corruption, track longitudinally aggregated course performance, and explore student trajectories across exam attempts.
-
----
-
-## 📚 Wiki Table of Contents
-
-### 1. Project Architecture & Code Documentation
-* **[System Architecture](Architecture.md):** Complete high-level and component topology, data flows, and database ER schema.
-* **[Frontend Client Architecture](Code-Documentation/Frontend-Architecture.md):** React 18, Vite, MUI layout, AG Grid data matrices, Zustand stores, and client API layers.
-* **[Backend Service Architecture](Code-Documentation/Backend-Architecture.md):** FastAPI REST application, SQLAlchemy ORM, Alembic migrations, and JWT bearer auth.
-* **[Deployment & Configuration Guide](Code-Documentation/Deployment-Guide.md):** Docker Compose setup, container registries, dynamic base URL injection, and CORS allowlisting.
+> 📌 **Master Project Documentation & Frontend Portal:**
+> For the overarching system overview, UI architecture, full agile sprint backlog, and complete user story traceability matrix, please visit the primary project hub repository:
+> 🔗 **[`d2-project-client/docs/wiki`](https://gitlab.gwdg.de/sudarshan.bashyal/d2-project-client/-/tree/main/docs/wiki)**
 
 ---
 
-### 2. Release Management & History
-* **[Delimited Releases Log](Releases.md):** Semantic versioning releases with official Git tags, delimiting alpha milestones and the current beta release.
-  * **Release v0.0.1-alpha (Inception · Sprint 0: Ignition):** Architectural blueprint, decoupled repositories, Docker Compose setup.
-  * **Release v0.1.0-alpha (Early Alpha Milestone · Sprint 1):** Ingestion engine, multi-format parser, atomic DB transaction, preview grid.
-  * **Release v0.2.0-alpha (Alpha Milestone 2 · Sprint 2):** Pass/Fail calculation, per-person student history, attempt categorization, and absence parsing.
-  * **Release v0.3.0-beta (Beta Milestone · Sprint 3 - Latest):** Course Drive file repository, exam attempt comparison, granular marks editing, and dynamic zero-rebuild configuration.
+## 📚 Backend Documentation Index
+
+### 1. Architecture & Data Persistence
+* **[System Architecture](Architecture.md):** Backend service topology, data flow sequence diagrams, and relational database ER schema.
+* **[Backend Service Architecture](Code-Documentation/Backend-Architecture.md):** FastAPI application structure, SQLAlchemy models, Pydantic schemas, and Alembic migrations.
+* **[Deployment & Configuration Guide](Code-Documentation/Deployment-Guide.md):** Docker Compose orchestration, CORS origin allowlisting, and security parameters.
 
 ---
 
-### 3. Sprint Planning & Iteration Delivery
-* **[Sprint 0 (08/04/2026 – 08/17/2026)](sprints/Sprint-0.md):** Architectural blueprint, Docker setup, quality infrastructure.
-* **[Sprint 1 (08/18/2026 – 08/31/2026)](sprints/Sprint-1.md):** Ingestion engine foundations, multi-format parsing, schema normalization.
-* **[Sprint 2 (09/01/2026 – 09/14/2026)](sprints/Sprint-2.md):** **Delivered Alpha 2 Milestone (9 items)** — Pass/Fail calculation, Per-Person History, Attempt Categorization, absence codes.
-* **[Sprint 3 (09/15/2026 – 09/29/2026)](sprints/Sprint-3.md):** **Active Beta Milestone (69 Points, 27 User Stories & Tasks)** — Course Drive UI, Exam Attempts Comparison, Tabular Data Paste Studio, Lecture View Restrictions, and Deployment Hardening.
+### 2. Release Management & Version Milestones
+* **[Delimited Releases Log](Releases.md):** Backend milestones and API contracts:
+  * **Release v0.0.1-alpha (Sprint 0: Ignition):** Project setup, decoupled architecture, PostgreSQL 15 containerization.
+  * **Release v0.1.0-alpha (Sprint 1):** Ingestion engine foundations, multi-format parsing, schema normalization.
+  * **Release v0.2.0-alpha (Sprint 2):** Pass/Fail calculation, Per-Person History, Attempt Categorization, absence codes.
+  * **Release v0.3.0-beta (Sprint 3 - Latest):** Course Drive file hub, exam attempt comparison, granular marks editing, and deployment hardening.
 
 ---
 
-### 4. Developer Onboarding, Traceability & Handover
-* **[Developer Onboarding Guide](Onboarding-Guide.md):** Day-1 setup, native & Docker development environments, coding conventions, and verification steps.
-* **[Full Requirements & Code Traceability Matrix](Traceability-Matrix.md):** End-to-end mapping from agile User Stories & Tasks to Backend code, Frontend views, and automated tests.
-* **[Project Handover & Delivery Checklist](Handover-Checklist.md):** Package verification, test accounts, database backup & restoration, and troubleshooting FAQ.
+### 3. Developer Onboarding & Handover
+* **[Developer Onboarding Guide](Onboarding-Guide.md):** Python virtual environment setup, Pytest test runner, and Docker workflow.
+* **[Traceability Matrix](Traceability-Matrix.md):** Backend routes and automated tests mapped to User Stories.
+* **[Project Handover Checklist](Handover-Checklist.md):** Package verification, test accounts, database backup & restoration.
 
 ---
 
 ## 👥 Core Project Team (Group D2)
 
-| Name | Role | Mail |
+| Name | Role | Email |
 | :--- | :--- | :--- |
+| **Sudarshan Bashyal** | Backend Lead & Security | `sudarshan.bashyal@uni-hildesheim.de` |
 | **Ion Poalelungi** | Architecture & Frontend Lead | `poalelungi@uni-hildesheim.de` |
 | **Anna Chiriciuc** | Frontend & Quality Assurance | `chiriciuc@uni-hildesheim.de` |
-| **Sudarshan Bashyal** | Backend Lead & Security | `sudarshan.bashyal@uni-hildesheim.de` |
 | **Yazan Al Rifaee** | Full-Stack Developer | `alrifaee@uni-hildesheim.de` |
 | **Marvin Wucher** | Full-Stack Developer | `wucher@uni-hildesheim.de` |
 | **Amara Aslam** | Frontend Developer | `aslam@uni-hildesheim.de` |

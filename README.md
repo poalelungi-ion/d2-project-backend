@@ -1,301 +1,167 @@
-# d2-project-backend
+# Study Progress Analysis (SPA) – Backend Service & Data Layer
 
-FastAPI service behind the Study Progress Analysis (SPA) system. It ingests
-exam data files, stores them in PostgreSQL and serves the analytics the client
-renders.
+[![Stage: Beta](https://img.shields.io/badge/Stage-Beta%20v0.3.0-blue.svg)](docs/wiki/Releases.md)
+[![Python: 3.11+](https://img.shields.io/badge/Python-3.11%2B-blue.svg)](https://www.python.org/)
+[![FastAPI](https://img.shields.io/badge/FastAPI-0.110%2B-009688.svg)](https://fastapi.tiangolo.com/)
+[![Database: PostgreSQL 15](https://img.shields.io/badge/Database-PostgreSQL%2015-336791.svg)](https://www.postgresql.org/)
 
-The React client lives in a separate repository,
-[`d2-project-client`](https://gitlab.gwdg.de/sudarshan.bashyal/d2-project-client).
-The two communicate only over this HTTP API.
+FastAPI REST application and relational data layer powering the **Study Progress Analysis (SPA)** platform for **Stiftung Universität Hildesheim (Software Systems Engineering - SSE)**. 
 
-## System architecture
+The service ingests heterogeneous exam spreadsheets, ensures ACID transaction safety, handles absence code normalization, manages longitudinal course analytics, and serves student academic trajectories over an authenticated HTTP API.
 
-| Layer | Technology | Repository |
+> 📌 **Primary Project Repository & Master Documentation:**
+> For the overarching system architecture, sprint boards, end-to-end user story traceability matrix, and client user interface, refer to the frontend project hub:
+> 🔗 **[`d2-project-client`](https://gitlab.gwdg.de/sudarshan.bashyal/d2-project-client)**
+
+---
+
+## 🚀 Delimited Backend Releases & Official Git Branches
+
+Following [Semantic Versioning 2.0.0](https://semver.org/), iterations are delimited by agile sprints, marking the progression from **Alpha** prototypes to the current **Beta** release.
+
+| Milestone | Official Kanban Board | Git Release Branch | Git Release Commit | Git Tags | Status |
+| :--- | :--- | :--- | :--- | :--- | :---: |
+| **Release v0.3.0-beta** | `D2-Project: Sprint 3`<br>*(Created 09/18/2026)* | [`release/sprint-3-v0.3.0-beta`](https://gitlab.gwdg.de/sudarshan.bashyal/d2-project-backend/-/tree/release/sprint-3-v0.3.0-beta) | `release(sprint-3): D2-Project Sprint 3 - v0.3.0-beta - Course Drive, Exam Analytics & Hardening` | [`v0.3.0-beta`](https://gitlab.gwdg.de/sudarshan.bashyal/d2-project-backend/-/tags/v0.3.0-beta)<br>`release-sprint-3-v0.3.0-beta` | **Delivered (Beta Stage)** |
+| **Release v0.2.0-alpha** | `D2-Project: Sprint 2`<br>*(Created 09/03/2026)* | [`release/sprint-2-v0.2.0-alpha`](https://gitlab.gwdg.de/sudarshan.bashyal/d2-project-backend/-/tree/release/sprint-2-v0.2.0-alpha) | `release(sprint-2): D2-Project Sprint 2 - v0.2.0-alpha - Core Analytics, Attempts & Absence Normalization` | [`v0.2.0-alpha`](https://gitlab.gwdg.de/sudarshan.bashyal/d2-project-backend/-/tags/v0.2.0-alpha)<br>`release-sprint-2-v0.2.0-alpha` | Delivered (Alpha 2) |
+| **Release v0.1.0-alpha** | `D2-Project: Sprint 1`<br>*(Created 08/14/2026)* | [`release/sprint-1-v0.1.0-alpha`](https://gitlab.gwdg.de/sudarshan.bashyal/d2-project-backend/-/tree/release/sprint-1-v0.1.0-alpha) | `release(sprint-1): D2-Project Sprint 1 - v0.1.0-alpha - Ingestion & Validation Foundations` | [`v0.1.0-alpha`](https://gitlab.gwdg.de/sudarshan.bashyal/d2-project-backend/-/tags/v0.1.0-alpha)<br>`release-sprint-1-v0.1.0-alpha` | Delivered (Alpha 1) |
+| **Release v0.0.1-alpha** | `D2-Project: Ignition`<br>*(Created 08/03/2026)* | [`release/sprint-0-ignition`](https://gitlab.gwdg.de/sudarshan.bashyal/d2-project-backend/-/tree/release/sprint-0-ignition) | `release(sprint-0): D2-Project Ignition - v0.0.1-alpha - Project Setup & Architecture` | [`release-ignition-sprint-0`](https://gitlab.gwdg.de/sudarshan.bashyal/d2-project-backend/-/tags/release-ignition-sprint-0)<br>`v0.0.1-alpha` | Completed (Inception) |
+
+---
+
+## 🛠️ Backend Stack & Components
+
+| Concern | Library / Technology | Description |
 | :--- | :--- | :--- |
-| Client | React SPA, Material-UI, AG Grid, Recharts | `d2-project-client` |
-| API | FastAPI, Pydantic, SQLAlchemy | `d2-project-backend` (this one) |
-| Database | PostgreSQL 15 | provisioned by compose |
-| Orchestration | Docker Compose over the published images | `docker-compose/` |
+| **Language** | Python 3.11+ | Modern type annotations, async handlers, and robust typing |
+| **Web Framework** | FastAPI (ASGI) | High-performance asynchronous REST endpoints with auto-generated OpenAPI / Swagger specs |
+| **ORM & Data Layer** | SQLAlchemy 2.0 | Declarative relational models, connection pooling, and atomic transaction handling |
+| **Database** | PostgreSQL 15 | Relational ACID database provisioned and managed via Docker |
+| **Migrations** | Alembic | Version-controlled schema migrations executed on startup |
+| **Data Parsing** | Pandas + OpenPyXL | Ingestion engine supporting `.xlsx`, `.csv`, `.tsv`, and `.ods` files |
+| **Authentication** | PyJWT + Passlib (bcrypt) | Stateless access tokens and rotating `httpOnly` refresh tokens |
+| **Test Runner** | Pytest + httpx | Automated integration and regression test suites |
 
-## Layout
+---
+
+## 📁 Repository Structure
 
 ```
-main.py            app creation, CORS, router mounting, startup seeding
-config.py          every environment variable the service reads
-dependencies.py    shared FastAPI dependencies (bearer-token auth)
-database.py        SQLAlchemy engine, session factory, get_db dependency
-models.py          ORM models
-schemas.py         Pydantic request/response schemas
-seed.py            demonstration data for an empty database
-routers/           endpoints grouped by resource
-  students.py      roster, profiles, transcripts, status
-  courses.py       catalogue, creation, editing, archiving
-  grades.py        exam results
-  upload.py        CSV/Excel ingestion (preview and confirm)
-  stats.py         dashboard KPIs
-tests/             pytest suite; tests/smoke/ holds manual scripts
-docs/              traceability matrix
+d2-project-backend/
+  main.py                FastAPI application instantiation, CORS middleware, router registration
+  config.py              Centralized environment configuration, secret validation, CORS parsing
+  dependencies.py        Shared FastAPI dependencies (DB sessions, authenticated user validation)
+  database.py            SQLAlchemy engine, scoped session factory, Base declarative class
+  models.py              ORM entities: User, Course, Student, ExamResult, CourseFile, RefreshToken
+  schemas.py             Pydantic request & response DTOs with validation rules
+  seed.py                Sample university dataset for initial database seeding
+  routers/               REST endpoints grouped by business domain:
+    auth.py              Sign in, registration, token refresh, sign out
+    courses.py           Course catalogue, details, editing, course drive files
+    students.py          Student profiles, transcripts, Matrikelnummer validation
+    grades.py            Exam mark recording, attempt categorization, grade adjustments
+    upload.py            Spreadsheet parsing preview, column normalization, atomic commit
+    stats.py             Semester distributions, KPI cards, passing rate analytics
+  migrations/            Alembic migration versions and environment configurations
+  tests/                 Pytest suite covering routers, services, security, and edge cases
+  docs/wiki/             Backend-focused architecture, releases, and deployment guides
 ```
 
-## Running it
+---
 
-### With Docker (PostgreSQL included)
+## ⚡ Running the Backend
+
+### Option A: With Docker (PostgreSQL included)
 
 ```bash
+# Build and run backend API and PostgreSQL database
 docker compose up --build
 ```
 
-The API is then on `http://localhost:8000`, with interactive documentation at
-`http://localhost:8000/docs`.
+- **API Base:** `http://localhost:8000`
+- **Interactive Swagger Docs:** `http://localhost:8000/docs`
+- **OpenAPI Schema:** `http://localhost:8000/openapi.json`
 
-This compose file starts the database and the API only. To run the whole
-system, including the client, use the compose file in the sibling
-`docker-compose/` directory, which pulls both published images.
+### Option B: Local Virtualenv (Native Python)
 
-### Without Docker
-
-Requires a reachable PostgreSQL instance, or set `DATABASE_URL` to a SQLite
-path for a quick look.
+Requires a running PostgreSQL instance (or set `DATABASE_URL` in `.env`):
 
 ```bash
-python -m venv .venv && source .venv/bin/activate
+# 1. Create and activate virtual environment
+python -m venv .venv
+source .venv/bin/activate  # On Windows: .venv\Scripts\Activate.ps1
+
+# 2. Install dependencies
 pip install -r requirements.txt
-uvicorn main:app --reload
+
+# 3. Start development server with auto-reload
+uvicorn main:app --reload --port 8000
 ```
 
-## Configuration & CORS
+---
 
-Copy `.env.example` to `.env` (or pass environment variables via Docker) to configure database connection and security:
+## 🔒 Configuration & CORS Security Hardening
+
+Configuration values are loaded from `.env` via `config.py`:
 
 | Variable | Default | Purpose |
 | :--- | :--- | :--- |
-| `DATABASE_URL` | `postgresql://spa_user:spa_password@db/spa_db` | PostgreSQL connection string |
-| `CORS_ORIGINS` | `http://localhost:5173,http://127.0.0.1:5173` | Comma-separated list of allowed frontend origins |
-| `JWT_SECRET` | `insecure-development-secret-change-me` | Secret key for signing tokens |
-| `COOKIE_SECURE` | `false` | Set to `true` when running in production over HTTPS |
+| `DATABASE_URL` | `postgresql://spa_user:spa_password@db/spa_db` | PostgreSQL connection URL |
+| `CORS_ORIGINS` | `http://localhost:5173,http://127.0.0.1:5173` | Comma-separated list of allowed client origins |
+| `JWT_SECRET` | `insecure-development-secret-change-me` | Secret key for signing bearer tokens |
+| `COOKIE_SECURE` | `false` | Set to `true` when deploying in production over HTTPS |
 
 ### Connecting Remote Clients (CORS Setup)
-When deploying the system on a remote server or VM, the backend must be told which origin(s) the client's browser is allowed to connect from:
+
+When deploying on a server or VM, the backend must be explicitly informed of the frontend's origin:
+
 ```env
 CORS_ORIGINS=http://<YOUR_SERVER_IP_OR_DOMAIN>:5173
 ```
-- **Trailing Slashes**: Automatically stripped by backend configuration parsing (`.rstrip("/")`).
-- **Wildcards (`*`)**: Not permitted because authentication relies on credentialed requests (`credentials: 'include'`) for secure `httpOnly` refresh cookies.
 
+- **Trailing Slashes:** Automatically stripped by `config.py` (`.rstrip("/")`) to prevent preflight mismatch errors.
+- **Wildcard Restrictions:** Wildcards (`*`) are disallowed because authentication relies on credentialed requests (`credentials: 'include'`) for secure `httpOnly` refresh cookies.
 
-## Database migrations
+---
 
-Schema changes are managed with Alembic. `alembic.ini` points at `migrations/`,
-and `migrations/env.py` reads `DATABASE_URL` from `config.py` and exposes
-`Base.metadata` as the autogenerate target.
+## 🗃️ Database Migrations (Alembic)
 
-Under normal use nothing needs to be run by hand: `run_migrations()` in
-`src/app.py` upgrades the database to `head` on every startup, so
-`docker compose up` leaves the schema current. If Alembic cannot run, startup
-falls back to `Base.metadata.create_all`, which creates missing tables but does
-not alter existing ones.
+Database schema evolution is managed via Alembic:
 
-### Running them by hand
-
-Inside the stack, which is the simplest option because `DATABASE_URL` already
-resolves the `db` hostname on the compose network:
-
-```bash
-docker compose up -d db
-docker compose run --rm backend alembic upgrade head
-```
-
-From the host, pointing at the port the database container publishes:
-
-```bash
-docker compose up -d db
-DATABASE_URL=postgresql://spa_user:spa_password@localhost:5432/spa_db \
+- **Automatic Startup Migration:** On container boot, `run_migrations()` in `main.py` applies all pending migrations up to `head`.
+- **Creating a Migration:**
+  ```bash
+  alembic revision --autogenerate -m "add_column_name"
+  ```
+- **Upgrading Manually:**
+  ```bash
   alembic upgrade head
-```
+  ```
 
-The `DATABASE_URL` override matters: the default value names the compose
-service `db`, which does not resolve outside Docker.
+---
 
-### Common commands
-
-| Command | Purpose |
-| :--- | :--- |
-| `alembic current` | Revision the database is on |
-| `alembic history` | Full revision chain |
-| `alembic upgrade head` | Apply everything outstanding |
-| `alembic downgrade -1` | Roll back one revision |
-| `alembic revision -m "description"` | New empty revision |
-| `alembic revision --autogenerate -m "description"` | New revision diffed against the models |
-
-Always read an autogenerated revision before committing it. Alembic detects
-added and dropped columns reliably, but renames arrive as a drop plus an add,
-which discards the data.
-
-### Revisions
-
-| Revision | Purpose |
-| :--- | :--- |
-| `0001_initial_schema` | Courses, students, exams and exam results |
-| `0002_add_attempt_type` | Which sitting an imported batch of results belongs to |
-| `0003_absence_and_nullable_grade` | Absence codes, and a null grade for excused attempts |
-
-Each revision uses `op.batch_alter_table` rather than a bare `op.alter_column`
-so it also applies against SQLite, which cannot alter a column in place.
-
-Downgrades are not always reversible in practice. Rolling `0003` back makes
-`grade` non-nullable again, which fails while any excused attempt still holds a
-null grade.
-
-### Writing a migration
-
-1. Change the models under `src/database/models/`.
-2. Generate the revision with `--autogenerate` against a database that is
-   already at `head`, so the diff only contains the new change.
-3. Rename the generated file to continue the `NNNN_short_slug` numbering, and
-   set `revision` to match the filename; `file_template` in `alembic.ini` keeps
-   the two aligned.
-4. Check that `down_revision` points at the previous head, then review the
-   `upgrade` and `downgrade` bodies.
-5. Apply it with `alembic upgrade head` and run the suite.
-
-The test suite builds its schema with `create_all` against SQLite rather than
-by running migrations, so a passing suite is not evidence that a revision
-applies cleanly. Test it against PostgreSQL.
-
-## Configuration
-
-All settings are read in `config.py` and every one has a working default.
-Copy `.env.example` to `.env` to override them.
-
-| Variable | Default | Purpose |
-| :--- | :--- | :--- |
-| `DATABASE_URL` | `postgresql://spa_user:spa_password@db/spa_db` | SQLAlchemy connection URL |
-| `JWT_SECRET` | development placeholder | Signs access and refresh tokens |
-| `ACCESS_TOKEN_TTL_MINUTES` | `15` | Access token lifetime |
-| `REFRESH_TOKEN_TTL_DAYS` | `14` | Refresh token lifetime |
-| `UNIVERSITY_EMAIL_DOMAIN` | `uni-hildesheim.de` | The only mail domain accounts may use |
-| `MIN_PASSWORD_LENGTH` | `10` | Shortest password accepted at registration |
-| `BCRYPT_ROUNDS` | `12` | Password hashing work factor |
-| `COOKIE_SECURE` | `false` | Send the refresh cookie only over HTTPS |
-| `COOKIE_SAMESITE` | `lax` | SameSite flag on the refresh cookie |
-| `DEBUG` | `true` | `false` turns the startup warnings into errors |
-| `CORS_ORIGINS` | `http://localhost:5173,http://127.0.0.1:5173` | Comma-separated allow-list |
-| `SEED_ON_STARTUP` | `true` | Seed demonstration data into an empty database |
-| `BOOTSTRAP_ADMIN_EMAIL` / `_PASSWORD` | empty | Optional first account, created only while `users` is empty |
-
-Two of these are not really optional outside development:
-
-* `JWT_SECRET` signs every token, so a known value lets anyone mint a session
-  for any account. Generate one with `openssl rand -hex 32`. The app refuses to
-  start on the default once `DEBUG=false`.
-* `CORS_ORIGINS` cannot be `*`. The refresh cookie makes the auth calls
-  credentialed, and browsers reject a wildcard origin on those; a `*` left in
-  the environment is dropped with a warning and the development origins are
-  used instead.
-
-## Tests
+## 🧪 Testing & Quality Gates
 
 ```bash
-pip install -r requirements.txt -r requirements-dev.txt
+# Execute full backend test suite
 pytest
+
+# Run tests with verbose output
+pytest -v
+
+# Run tests with coverage report
+pytest --cov=src --cov-report=term-missing
 ```
 
-`tests/conftest.py` points the suite at SQLite and disables seeding, so no
-PostgreSQL instance is needed.
+---
 
-`tests/smoke/` holds manual scripts that issue real HTTP requests against a
-running server. They are intentionally not named `test_*.py` so pytest does not
-execute them during collection; see `tests/smoke/README.md`.
+## 👥 Core Project Team (Group D2)
 
-### Pre-commit hook
-
-`.githooks/pre-commit` runs the pipeline's `quality` jobs (duplication,
-complexity, unit tests) with the same commands and coverage floor. It checks
-the staged files only, so unstaged edits can't make it pass. It uses `.venv`
-(set `PYTHON` to use another interpreter) and needs `npx` for the duplication
-scan. It doesn't run the approval check or the image publish. Enable it once
-per clone, and skip it once with `git commit --no-verify`:
-
-```bash
-git config core.hooksPath .githooks
-```
-
-## Authentication
-
-Every route that carries course or student data requires a signed-in user. The
-guard is applied once, in `src/router/router.py`, where each data router is
-included with `dependencies=[Depends(get_current_user)]` -- so a new endpoint is
-protected by default rather than by remembering a decorator argument.
-
-### Accounts
-
-Accounts are restricted to the university mail domain, which lives in one place:
-`config.UNIVERSITY_EMAIL_DOMAIN`. `RegisterRequest` validates against it, so a
-foreign address is a 422 from the schema layer and never reaches a service. The
-client mirrors the constant in `src/utils/constants.ts` purely to give instant
-form feedback; that copy enforces nothing.
-
-Passwords are stored only as bcrypt hashes (`src/lib/auth/passwords.py`). Each
-hash carries its own random salt, so two accounts with the same password store
-different digests. Nothing in the schema can hold a plaintext or reversible
-password. Registration rejects anything past bcrypt's 72-byte ceiling rather
-than hashing a silent truncation.
-
-### Tokens
-
-Two token types, one signing key, told apart by a `typ` claim that is checked on
-decode -- a refresh token cannot be replayed as a bearer token on a data route.
-
-| | Lifetime | Delivered as | Held by the client in |
-| :--- | :--- | :--- | :--- |
-| Access | `ACCESS_TOKEN_TTL_MINUTES` | Response body | Memory only |
-| Refresh | `REFRESH_TOKEN_TTL_DAYS` | `httpOnly` cookie, path `/api/auth` | Nothing -- JavaScript cannot read it |
-
-Refresh tokens rotate: `/api/auth/refresh` revokes the token presented and
-issues a new pair, so each one is good for exactly one exchange. `refresh_tokens`
-records the `jti` of each issuance, never the token itself, which is what makes
-revocation possible without the database being able to reconstruct the
-credential.
-
-Presenting an already-rotated token means two parties hold the same cookie and
-there is no way to tell which one is legitimate, so every session for that
-account is revoked and both must sign in again.
-
-| Endpoint | Auth | Purpose |
+| Name | Role | Email |
 | :--- | :--- | :--- |
-| `POST /api/auth/register` | public | Create an account in the university domain |
-| `POST /api/auth/login` | public | Exchange credentials for a token pair |
-| `POST /api/auth/refresh` | refresh cookie | Rotate the session |
-| `POST /api/auth/logout` | none | Revoke the session and clear the cookie |
-| `GET /api/auth/me` | access token | The account behind the token |
-
-For Swagger UI, paste the `access_token` from a login response into the
-**Authorize** modal.
-
-### Forgotten passwords
-
-There is no self-service reset, and a bcrypt hash cannot be read back, so a
-forgotten password is replaced rather than recovered:
-
-```bash
-# List the registered addresses
-python scripts/set_password.py --list x
-
-# Set a new password (prompted for, so it stays out of the shell history)
-python scripts/set_password.py someone@uni-hildesheim.de
-```
-
-Run it with the same `DATABASE_URL` the server uses. It revokes the account's
-existing sessions, on the assumption that a password is being changed because
-the old one may be compromised.
-
-> Registration is open to any `@uni-hildesheim.de` address, and every account
-> sees all course and student data. The domain check is a filter on who can
-> sign up, not an authorization model. Accounts can be switched off
-> individually by setting `users.is_active` to false, which takes effect within
-> one access-token lifetime.
-
-## Documentation
-
-`docs/TRACEABILITY.md` maps the User Stories and Acceptance Criteria to the
-code that implements them, across both repositories.
+| **Sudarshan Bashyal** | Backend Lead & Security | `sudarshan.bashyal@uni-hildesheim.de` |
+| **Ion Poalelungi** | Architecture & Frontend Lead | `poalelungi@uni-hildesheim.de` |
+| **Anna Chiriciuc** | Frontend & Quality Assurance | `chiriciuc@uni-hildesheim.de` |
+| **Yazan Al Rifaee** | Full-Stack Developer | `alrifaee@uni-hildesheim.de` |
+| **Marvin Wucher** | Full-Stack Developer | `wucher@uni-hildesheim.de` |
+| **Amara Aslam** | Frontend Developer | `aslam@uni-hildesheim.de` |
+| **Aditi Joshi** | QA & Frontend Developer | `joshi@uni-hildesheim.de` |
