@@ -1,7 +1,10 @@
-# Sprint 1: Early Alpha Foundations & File Ingestion
+# D2-Project: Sprint 1 (Early Alpha Foundations & File Ingestion)
 
+* **Official Kanban Board:** `D2-Project: Sprint 1` *(Created on: 08/14/2026 06:25 PM)*
 * **Sprint Timeline:** `August 18, 2026 – August 31, 2026` (`18.08.2026 – 31.08.2026`)
 * **Sprint Status:** Completed
+* **Git Release Branch:** [`release/sprint-1-v0.1.0-alpha`](https://gitlab.gwdg.de/sudarshan.bashyal/d2-project-client/-/tree/release/sprint-1-v0.1.0-alpha)
+* **Git Release Tag:** [`v0.1.0-alpha`](https://gitlab.gwdg.de/sudarshan.bashyal/d2-project-client/-/tags/v0.1.0-alpha) (`release-sprint-1-v0.1.0-alpha`)
 * **Target Delivery Release:** `v0.1.0-alpha` (Alpha Release 1)
 
 ---

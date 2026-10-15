@@ -18,6 +18,7 @@ The system allows university lecturers and academic staff to ingest heterogeneou
 
 ### 2. Release Management & History
 * **[Delimited Releases Log](Releases.md):** Semantic versioning releases with official Git tags, delimiting alpha milestones and the current beta release.
+  * **Release v0.0.1-alpha (Inception · Sprint 0: Ignition):** Architectural blueprint, decoupled repositories, Docker Compose setup.
   * **Release v0.1.0-alpha (Early Alpha Milestone · Sprint 1):** Ingestion engine, multi-format parser, atomic DB transaction, preview grid.
   * **Release v0.2.0-alpha (Alpha Milestone 2 · Sprint 2):** Pass/Fail calculation, per-person student history, attempt categorization, and absence parsing.
   * **Release v0.3.0-beta (Beta Milestone · Sprint 3 - Latest):** Course Drive file repository, exam attempt comparison, granular marks editing, and dynamic zero-rebuild configuration.
