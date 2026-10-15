@@ -4,7 +4,7 @@
 * **Sprint Status:** Active
 * **Total Story Points:** 69 Points
 * **Total Work Items:** 27 Items (19 User Stories, 8 Technical Tasks)
-* **Target Delivery Release:** Release v3.0.0
+* **Target Delivery Release:** `v0.3.0-beta` (Beta Stage Milestone - Latest)
 
 ---
 

@@ -45,11 +45,26 @@ This document provides strict, bidirectional traceability connecting agile **Use
 
 ---
 
-## 🏛️ Sprints 1 & 2 Foundations Traceability
+## 📦 Sprint 2 Traceability Registry (09/01/2026 – 09/14/2026 · Release v0.2.0-alpha)
+
+| Work Item ID & Title | Acceptance Criteria | Backend Implementation | Frontend Implementation | Automated Verification Tests |
+| :--- | :--- | :--- | :--- | :--- |
+| **US #96054**<br/>*Grade-Driven Pass/Fail Calculation* | Derive pass/fail status (`<= 4.0`) and parse absence codes (`na`, `ta`, `ne`). | `models.ExamResult.status` | `src/utils/gradeOutcome.ts`, `CourseMarksTable.tsx` | `src/utils/gradeOutcome.test.ts`<br/>*(10 test cases)* |
+| **US #99859**<br/>*Aggregated Data View: Per-Person History* | View aggregated historical exam records and attempts per student. | `routers/students.py` | `src/components/features/StudentDetail.tsx` | `src/utils/studentTranscript.test.ts` |
+| **US #96055**<br/>*Categorize Exam Attempts & Missing Programs* | Attempt categorization (`Exam 1`/`2`/`Other`) and graceful study program fallback. | `models.ExamResult.attempt_type` | `src/components/features/batchUpload/CourseInfoStep.tsx` | `tests/test_api.py`<br/>`src/api/client.test.ts` |
+| **BUG #99879**<br/>*Drag and Drop Window Malfunction* | Resolve drag & drop window drop-freeze across browsers. | Input stream handling | `src/components/features/batchUpload/SelectFileStep.tsx` | `src/components/features/batchUpload/SelectFileStep.test.tsx` |
+| **BUG #99881**<br/>*Semester Chronological Sorting* | Enforce chronological sorting (Winter/Summer) instead of alphabetical. | `schemas.SemesterEnum` | `src/utils/semester.ts` | `src/utils/semester.test.ts`<br/>*(8 test cases)* |
+| **US #95732**<br/>*Upload an Exam Data File* | Upload and parse `.xlsx`, `.csv`, `.tsv`, `.ods` files. | `routers/upload.py` | `src/components/features/batchUpload/` | `tests/test_upload.py` |
+| **US #96053**<br/>*Validate Required Fields* | Pre-commit validation of Matrikelnummer, Name, Semester. | `routers/upload.py` | `src/components/features/batchUpload/ReviewStep.tsx` | `tests/test_api.py` |
+| **US #99900**<br/>*Display Exams Taken per Semester* | Render distribution count of exams taken by students per semester. | `routers/stats.py` | `src/components/features/ExamsHeatmap.tsx` | `src/components/features/ExamsHeatmap.test.tsx` |
+| **US #99895**<br/>*Redirect After Course Import* | Auto-redirect from upload wizard directly to imported course view. | Ingestion response contract | `src/hooks/useAppLogic.tsx` | `uploadRedirect.test.ts` |
+
+---
+
+## 🏛️ Sprint 1 Foundations Traceability (Release v0.1.0-alpha)
 
 | Requirement | Description | Implementation Trace | Test Coverage |
 | :--- | :--- | :--- | :--- |
-| **US #95732** *(Sprint 1)* | Upload exam files (.xlsx, .csv, .tsv, .ods). | BE: `routers/upload.py`<br/>FE: `SelectFileStep.tsx` | `tests/test_upload.py`<br/>`SelectFileStep.test.tsx` |
-| **US #96055** *(Sprint 2)* | Categorize exam attempts (`Exam 1`, `Exam 2`, `Other`). | BE: `models.ExamResult.attempt_type`<br/>FE: `CourseInfoStep.tsx` | `tests/test_api.py`<br/>`client.test.ts` |
-| **Visual Analytics** *(Sprint 2)* | Longitudinal trendlines, grade curve histograms, pass/fail donuts. | FE: `AnalysisHub.tsx`<br/>Recharts Line & Bar | `ExamsHeatmap.test.tsx` |
-| **Enterprise Deployment** *(Sprint 3 Hardening)* | Runtime `/config.js` API base URL injection & in-browser settings rescue dialog. | BE: `config.py`<br/>FE: `client.ts`, `AuthSettingsDialog.tsx` | `client.test.ts`<br/>`AuthSettingsDialog.test.tsx` |
+| **Multi-Format Ingestion** | Ingest `.xlsx`, `.csv`, `.tsv`, `.ods` via Pandas. | BE: `routers/upload.py`<br/>FE: `SelectFileStep.tsx` | `tests/test_upload.py` |
+| **ACID Archival** | Atomic transaction guarantees zero partial writes on upload errors. | BE: `upload_confirm()` (`db.flush()` + `db.commit()`) | `tests/test_api.py` |
+| **Interactive Preview** | AG Grid inline spreadsheet review prior to database commit. | FE: `ReviewStep.tsx` (`AgGridReact`) | `ReviewStep.test.tsx` |

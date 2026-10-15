@@ -17,17 +17,18 @@ The system allows university lecturers and academic staff to ingest heterogeneou
 ---
 
 ### 2. Release Management & History
-* **[Delimited Releases Log](Releases.md):** Formal release notes, semantic versioning gates, tagged builds, and release delivery artifacts.
-  * **Release v1.0.0 (Foundations & Ingestion Pipeline):** Core parser, validation engine, atomic DB transaction, preview grid.
-  * **Release v2.0.0 (Visual Analytics & Authenticated Identity):** SSE accounts, JWT session rotation, longitudinal trajectory charts, pass/fail histograms.
-  * **Release v3.0.0 (Course Drive, Advanced Exam Analytics & Tabbed Studio):** File drive system, exam attempt comparison, granular marks editing, and dynamic runtime configuration.
+* **[Delimited Releases Log](Releases.md):** Semantic versioning releases with official Git tags, delimiting alpha milestones and the current beta release.
+  * **Release v0.1.0-alpha (Early Alpha Milestone · Sprint 1):** Ingestion engine, multi-format parser, atomic DB transaction, preview grid.
+  * **Release v0.2.0-alpha (Alpha Milestone 2 · Sprint 2):** Pass/Fail calculation, per-person student history, attempt categorization, and absence parsing.
+  * **Release v0.3.0-beta (Beta Milestone · Sprint 3 - Latest):** Course Drive file repository, exam attempt comparison, granular marks editing, and dynamic zero-rebuild configuration.
 
 ---
 
 ### 3. Sprint Planning & Iteration Delivery
-* **[Sprint 1 (08/18/2026 – 08/31/2026)](sprints/Sprint-1.md):** Ingestion engine, file parsers, schema normalization, preview table.
-* **[Sprint 2 (09/01/2026 – 09/14/2026)](sprints/Sprint-2.md):** Secure SSE authentication, student transcripts, attempts categorization, charts suite.
-* **[Sprint 3 (09/15/2026 – 09/29/2026)](sprints/Sprint-3.md):** **Active Iteration (69 Points, 27 User Stories & Tasks)** — Course Drive UI, Exam Attempts Comparison, Tabular Data Paste Studio, Lecture View Restrictions, and Deployment Hardening.
+* **[Sprint 0 (08/04/2026 – 08/17/2026)](sprints/Sprint-0.md):** Architectural blueprint, Docker setup, quality infrastructure.
+* **[Sprint 1 (08/18/2026 – 08/31/2026)](sprints/Sprint-1.md):** Ingestion engine foundations, multi-format parsing, schema normalization.
+* **[Sprint 2 (09/01/2026 – 09/14/2026)](sprints/Sprint-2.md):** **Delivered Alpha 2 Milestone (9 items)** — Pass/Fail calculation, Per-Person History, Attempt Categorization, absence codes.
+* **[Sprint 3 (09/15/2026 – 09/29/2026)](sprints/Sprint-3.md):** **Active Beta Milestone (69 Points, 27 User Stories & Tasks)** — Course Drive UI, Exam Attempts Comparison, Tabular Data Paste Studio, Lecture View Restrictions, and Deployment Hardening.
 
 ---
 

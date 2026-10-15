@@ -1,21 +1,23 @@
 # Release Management & Delimited Releases Log
 
-The Study Progress Analysis (SPA) project strictly follows [Semantic Versioning 2.0.0](https://semver.org/) (`MAJOR.MINOR.PATCH`).
-Each major iteration milestone is delimited by its corresponding sprint boundary.
+The Study Progress Analysis (SPA) project follows [Semantic Versioning 2.0.0](https://semver.org/) (`0.MAJOR.MINOR-PRERELEASE`).
+The project is currently in the **Beta Development Stage**, transitioning from early **Alpha** milestones. Each major iteration milestone is delimited by its corresponding sprint boundary and published as a tagged release in Git.
 
 ```mermaid
 flowchart LR
-    R1["v1.0.0 (Sprint 1)<br/>Foundations & Ingestion"] --> R2["v2.0.0 (Sprint 2)<br/>Analytics & Identity"]
-    R2 --> R3["v3.0.0 (Sprint 3)<br/>Course Drive & Advanced Analytics"]
+    R0["v0.0.1-alpha<br/>(Sprint 0: Setup)"] --> R1["v0.1.0-alpha<br/>(Sprint 1: Early Alpha)"]
+    R1 --> R2["v0.2.0-alpha<br/>(Sprint 2: Alpha 2)"]
+    R2 --> R3["v0.3.0-beta<br/>(Sprint 3: Current Beta)"]
 ```
 
 ---
 
-## 🚀 Release v3.0.0 — Course Drive, Exam Analytics & Deployment Hardening
-* **Release Date:** September 29, 2026
-* **Sprint Cycle:** **Sprint 3 (09/15/2026 – 09/29/2026)**
+## 🚀 Release v0.3.0-beta — Current Beta Milestone (Delimited by Sprint 3)
+* **Release Date:** September 29, 2026 (`15.09.2026 – 29.09.2026`)
+* **Stage:** **Beta Release (Latest)**
+* **Sprint Cycle:** **Sprint 3**
 * **Velocity Delivered:** 69 Story Points (27 Work Items)
-* **GitLab Tags:** `v3.0.0` (Client), `v3.0.0` (Backend)
+* **GitLab Tag:** [`v0.3.0-beta`](https://gitlab.gwdg.de/sudarshan.bashyal/d2-project-client/-/tags/v0.3.0-beta)
 
 ### Key Features Delivered
 1. **Course Drive & Document Hub:**
@@ -38,37 +40,40 @@ flowchart LR
 
 ---
 
-## 📦 Release v2.0.0 — Visual Analytics & Authenticated Identity
-* **Release Date:** September 14, 2026
-* **Sprint Cycle:** **Sprint 2 (09/01/2026 – 09/14/2026)**
-* **GitLab Tags:** `v2.0.0` (Client), `v2.0.0` (Backend)
+## 📦 Release v0.2.0-alpha — Alpha Milestone 2 (Delimited by Sprint 2)
+* **Release Date:** September 14, 2026 (`01.09.2026 – 14.09.2026`)
+* **Stage:** **Alpha Release 2**
+* **Sprint Cycle:** **Sprint 2** (9 Work Items)
+* **GitLab Tag:** [`v0.2.0-alpha`](https://gitlab.gwdg.de/sudarshan.bashyal/d2-project-client/-/tags/v0.2.0-alpha)
 
 ### Key Features Delivered
-1. **Secure University Authentication:**
-   - SSE domain enforcement (`@uni-hildesheim.de`) (`#95642`).
-   - JWT Access tokens (in-memory) & rotating HttpOnly refresh cookies.
-   - Global session gate and role-aware navigation.
-2. **Visual Analytics Suite:**
-   - Longitudinal student trajectories over time (`Recharts LineChart`).
-   - Comparative grade distribution histograms with student percentile highlight.
-   - Pass vs. Fail breakdown donuts.
-3. **Exam Attempt Categorization:**
-   - Categorized attempts (`Exam 1`, `Exam 2`, `Other`) with schema migration.
-   - Graceful study program normalization handling missing data.
+1. **Grade-Driven Pass/Fail Calculation & Absence Parsing (`#96054`):**
+   - Automatically computes passing threshold (`grade <= 4.0`) with normalized absence codes (`na`, `ta`, `ne`).
+2. **Aggregated Data View: Per-Person History (`#99859`):**
+   - Longitudinal student history view displaying transcripts across semesters.
+3. **Categorize Exam Attempts & Handle Missing Study Programs (`#96055`):**
+   - Attempt categorization (`Exam 1`, `Exam 2`, `Other`) with graceful fallback for unassigned study programs.
+4. **Ingestion & Dashboard Bug Fixes (`#99879`, `#99881`, `#99895`):**
+   - Fixed drag-and-drop window freeze; fixed alphabetical semester sort to strict chronological order.
+5. **Exam Distribution Metrics (`#99900`):**
+   - Calculated and rendered student exam counts per semester.
+6. **Core Ingestion Verification (`#95732`, `#96053`):**
+   - Required field validation and initial spreadsheet import.
 
 ---
 
-## 🏛️ Release v1.0.0 — Core Ingestion & Data Foundations
-* **Release Date:** August 31, 2026
-* **Sprint Cycle:** **Sprint 1 (08/18/2026 – 08/31/2026)**
-* **GitLab Tags:** `v1.0.0` (Client), `v1.0.0` (Backend)
+## 🏛️ Release v0.1.0-alpha — Early Alpha Milestone (Delimited by Sprint 1)
+* **Release Date:** August 31, 2026 (`18.08.2026 – 31.08.2026`)
+* **Stage:** **Alpha Release 1**
+* **Sprint Cycle:** **Sprint 1**
+* **GitLab Tag:** [`v0.1.0-alpha`](https://gitlab.gwdg.de/sudarshan.bashyal/d2-project-client/-/tags/v0.1.0-alpha)
 
 ### Key Features Delivered
-1. **Multi-Format Spreadsheet Ingestion:**
-   - Parsing engine supporting `.xlsx`, `.csv`, `.tsv`, and `.ods` (`#95732`).
+1. **Multi-Format Spreadsheet Ingestion Foundations:**
+   - Parsing engine supporting `.xlsx`, `.csv`, `.tsv`, and `.ods`.
 2. **Data Validation Engine:**
    - Pre-commit missing field inspection and invalid row flagging.
 3. **Atomic Transaction Guarantees:**
    - Zero partial saves; all-or-nothing database flush and commit.
 4. **Interactive AG Grid Preview:**
-   - Inline typo corrections and approved absence (`na`/`ta`) handling prior to permanent archival.
+   - Inline typo corrections and approved absence handling prior to permanent archival.
