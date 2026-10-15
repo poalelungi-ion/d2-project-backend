@@ -63,6 +63,26 @@ pip install -r requirements.txt
 uvicorn main:app --reload
 ```
 
+## Configuration & CORS
+
+Copy `.env.example` to `.env` (or pass environment variables via Docker) to configure database connection and security:
+
+| Variable | Default | Purpose |
+| :--- | :--- | :--- |
+| `DATABASE_URL` | `postgresql://spa_user:spa_password@db/spa_db` | PostgreSQL connection string |
+| `CORS_ORIGINS` | `http://localhost:5173,http://127.0.0.1:5173` | Comma-separated list of allowed frontend origins |
+| `JWT_SECRET` | `insecure-development-secret-change-me` | Secret key for signing tokens |
+| `COOKIE_SECURE` | `false` | Set to `true` when running in production over HTTPS |
+
+### Connecting Remote Clients (CORS Setup)
+When deploying the system on a remote server or VM, the backend must be told which origin(s) the client's browser is allowed to connect from:
+```env
+CORS_ORIGINS=http://<YOUR_SERVER_IP_OR_DOMAIN>:5173
+```
+- **Trailing Slashes**: Automatically stripped by backend configuration parsing (`.rstrip("/")`).
+- **Wildcards (`*`)**: Not permitted because authentication relies on credentialed requests (`credentials: 'include'`) for secure `httpOnly` refresh cookies.
+
+
 ## Database migrations
 
 Schema changes are managed with Alembic. `alembic.ini` points at `migrations/`,
