@@ -438,12 +438,14 @@ def test_transcript_exposes_attempt_type():
     assert entry["attempt"] == 1
 
 
-def test_preview_absence_codes_and_ignores_passed_column():
+def test_preview_filters_status_codes_and_ignores_passed_column():
     paste = (
         "Matrikelnr\tName\tProgram\tSemester\tGrade\tPassed\n"
         "31001\tSchneider, Lena\tSE Master\t3\tNE\tYes\n"
         "31002\tBecker, Leon\tSE Master\t3\tEX\tPassed\n"
         "31003\tWagner, Sophie\tSE Master\t3\tAT\tNo\n"
+        "31005\tKlein, Jonas\tSE Master\t3\tNA\tYes\n"
+        "31006\tLang, Mira\tSE Master\t3\tTA\tNo\n"
         "31004\tHoffmann, Marie\tSE Master\t3\t1.7\tFailed\n"
     )
     response = client.post(
@@ -457,13 +459,7 @@ def test_preview_absence_codes_and_ignores_passed_column():
     )
     assert response.status_code == 200
     rows = {row["student_id"]: row for row in response.json()["preview_data"]}
-    assert rows["31001"]["outcome"] == "failed"
-    assert rows["31001"]["absence_code"] == "NE"
-    assert rows["31001"]["is_valid"] is True
-    assert rows["31002"]["outcome"] == "failed"
-    assert rows["31002"]["absence_code"] == "EX"
-    assert rows["31003"]["outcome"] == "excused"
-    assert rows["31003"]["absence_code"] == "AT"
+    assert set(rows) == {"31004"}
     # File said Failed; the numeric grade is the only source of truth.
     assert rows["31004"]["grade"] == "1.7"
     assert rows["31004"]["outcome"] == "passed"
@@ -490,7 +486,7 @@ def test_preview_rejects_passed_text_in_the_grade_cell():
     assert row["outcome"] == "invalid"
 
 
-def test_confirm_persists_absence_outcomes():
+def test_confirm_rejects_status_codes():
     payload = {
         "course": "ABSENCE101",
         "courseName": "Absence Course",
@@ -504,28 +500,10 @@ def test_confirm_persists_absence_outcomes():
                 "program": "SE Master",
                 "semester": "WISE_25",
                 "grade": "NE",
-            },
-            {
-                "student_id": "31022",
-                "first_name": "Med",
-                "last_name": "Note",
-                "program": "SE Master",
-                "semester": "WISE_25",
-                "grade": "AT",
-            },
+            }
         ],
     }
-    assert client.post("/api/upload/confirm/", json=payload).status_code == 200
-    ne = client.get("/api/students/31021").json()["transcript"][0]
-    at = client.get("/api/students/31022").json()["transcript"][0]
-    assert ne["passed"] is False
-    assert ne["outcome"] == "failed"
-    assert ne["absence_code"] == "NE"
-    assert ne["grade"] == 5.0
-    assert at["passed"] is False
-    assert at["outcome"] == "excused"
-    assert at["absence_code"] == "AT"
-    assert at["grade"] is None
+    assert client.post("/api/upload/confirm/", json=payload).status_code == 400
 
 
 def test_confirm_rejects_passed_text_as_a_grade():
@@ -614,31 +592,31 @@ def test_batch_grade_update_accepts_the_same_cells_as_upload():
             {
                 "result_id": entry["result_id"],
                 "version": entry["version"],
-                "grade": "NE",
+                "grade": "2.3",
             }
         ],
     )
     assert response.status_code == 200
-    failed = client.get("/api/students/31041").json()["transcript"][0]
-    assert failed["grade"] == 5.0
-    assert failed["outcome"] == "failed"
-    assert failed["absence_code"] == "NE"
+    updated = client.get("/api/students/31041").json()["transcript"][0]
+    assert updated["grade"] == 2.3
+    assert updated["outcome"] == "passed"
+    assert updated["absence_code"] is None
 
-    excused = client.post(
-        "/api/grades/",
-        json=[
-            {
-                "result_id": failed["result_id"],
-                "version": failed["version"],
-                "grade": "AT",
-            }
-        ],
-    )
-    assert excused.status_code == 200
-    sitting = client.get("/api/students/31041").json()["transcript"][0]
-    assert sitting["grade"] is None
-    assert sitting["outcome"] == "excused"
-    assert sitting["absence_code"] == "AT"
+
+def test_batch_grade_update_rejects_status_codes():
+    entry = _import_one_grade("31043", "EDIT103", "2.0")
+    for grade in ("NE", "EX", "NA", "TA", "AT"):
+        response = client.post(
+            "/api/grades/",
+            json=[
+                {
+                    "result_id": entry["result_id"],
+                    "version": entry["version"],
+                    "grade": grade,
+                }
+            ],
+        )
+        assert response.status_code == 422, grade
 
 
 def test_batch_grade_update_rejects_invalid_grades():
@@ -686,14 +664,6 @@ def test_excused_attempts_are_excluded_from_pass_rate_and_at_risk():
                 "last_name": "Note",
                 "program": "SE Master",
                 "semester": "WISE_25",
-                "grade": "AT",
-            },
-            {
-                "student_id": "31053",
-                "first_name": "Med",
-                "last_name": "Note",
-                "program": "SE Master",
-                "semester": "WISE_25",
                 "grade": "5.0",
             },
             {
@@ -718,10 +688,8 @@ def test_excused_attempts_are_excluded_from_pass_rate_and_at_risk():
 
     courses = client.get("/api/courses/").json()
     course = next(c for c in courses if c["course_name"] == "Excuse Course")
-    assert course["total_attempts"] == 6
+    assert course["total_attempts"] == 5
     assert course["pass_rate"] == 20.0
-    mark = next(m for m in course["marks"] if m["student_id"] == 31053 and m["outcome"] == "excused")
-    assert mark["grade"] is None
 
     stats = client.get("/api/stats/").json()
     at_risk_ids = {row["student_id"] for row in stats["atRisk"]}

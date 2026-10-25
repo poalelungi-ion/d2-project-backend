@@ -16,6 +16,7 @@ from src.router.dto import UploadConfirmRequest
 from src.services.grade_outcome import (
     UnrecognizedGrade,
     evaluate_grade,
+    is_filtered_status_code,
     is_ignored_column,
 )
 
@@ -75,7 +76,7 @@ def _read_paste(text: str) -> pd.DataFrame:
             status_code=status.HTTP_400_BAD_REQUEST,
             detail="Pasted data is not tabular. Copy cells from a spreadsheet or paste CSV.",
         )
-    df = pd.read_csv(io.StringIO(stripped), sep=sep)
+    df = pd.read_csv(io.StringIO(stripped), sep=sep, keep_default_na=False)
     if df.empty:
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Pasted data has no data rows.")
     return df
@@ -89,16 +90,16 @@ def _read_file(filename: str, contents: bytes) -> pd.DataFrame:
         )
     try:
         if filename.endswith(".csv"):
-            return pd.read_csv(io.BytesIO(contents))
+            return pd.read_csv(io.BytesIO(contents), keep_default_na=False)
         if filename.endswith(".tsv"):
-            return pd.read_csv(io.BytesIO(contents), sep="\t")
+            return pd.read_csv(io.BytesIO(contents), sep="\t", keep_default_na=False)
         if filename.endswith(".ods"):
-            return pd.read_excel(io.BytesIO(contents), engine="odf")
+            return pd.read_excel(io.BytesIO(contents), engine="odf", keep_default_na=False)
         if filename.endswith(".xlsx"):
-            return pd.read_excel(io.BytesIO(contents), engine="openpyxl")
+            return pd.read_excel(io.BytesIO(contents), engine="openpyxl", keep_default_na=False)
         if filename.endswith(".xls"):
-            return pd.read_excel(io.BytesIO(contents))
-        return pd.read_excel(io.BytesIO(contents), engine="openpyxl")
+            return pd.read_excel(io.BytesIO(contents), keep_default_na=False)
+        return pd.read_excel(io.BytesIO(contents), engine="openpyxl", keep_default_na=False)
     except HTTPException:
         raise
     except Exception as e:
@@ -182,6 +183,10 @@ async def preview_upload(
             for k in record:
                 if str(record[k]).lower() == "nan":
                     record[k] = ""
+
+            # NE/EX/NA/TA/AT are not grades. Drop the row so the student is not tracked.
+            if is_filtered_status_code(record["grade"]):
+                continue
 
             # Fill the placeholder or normalize common abbreviations here so the review
             # grid shows clean canonical values and resolves aliases.
