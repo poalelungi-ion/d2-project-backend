@@ -763,6 +763,68 @@ def test_preview_ignores_course_columns_in_the_file():
         assert key not in row
 
 
+def test_preview_rejects_unrecognized_column_names():
+    paste = (
+        "Matrikelnr\tName\tProgram\tSemester\tGrade\tEmail\n"
+        "12345\tSchneider, Lena\tSE Master\t3\t1.7\ta@uni.de\n"
+    )
+    response = client.post(
+        "/api/upload/preview/",
+        data={"paste": paste, "semester": "WISE_25", "nameSplitRule": "Last, First"},
+    )
+    assert response.status_code == 400
+    assert "Email" in response.json()["detail"]
+    assert "Matrikelnr" in response.json()["detail"]
+
+
+def test_preview_rejects_unknown_header_even_when_client_maps_it():
+    """A mapping cannot alias an unknown title onto a field — names are closed."""
+    paste = (
+        "Matrikelnr\tName\tProgram\tSemester\tEmail\n"
+        "12345\tSchneider, Lena\tSE Master\t3\t1.7\n"
+    )
+    response = client.post(
+        "/api/upload/preview/",
+        data={
+            "paste": paste,
+            "semester": "WISE_25",
+            "mapping": '{"Email": "grade", "Matrikelnr": "student_id", "Name": "name"}',
+            "nameSplitRule": "Last, First",
+        },
+    )
+    assert response.status_code == 400
+    assert "Email" in response.json()["detail"]
+
+
+def test_preview_rejects_two_columns_that_standardise_to_name():
+    paste = (
+        "Matrikelnr\tName\tFull Name\tGrade\n"
+        "12345\tSchneider, Lena\tLena Schneider\t1.7\n"
+    )
+    response = client.post(
+        "/api/upload/preview/",
+        data={"paste": paste, "semester": "WISE_25", "nameSplitRule": "Last, First"},
+    )
+    assert response.status_code == 400
+    assert "Name" in response.json()["detail"]
+
+
+def test_preview_standardises_note_and_matrikelnummer_without_client_mapping():
+    paste = (
+        "Matrikelnummer\tName\tStudiengang\tFachsemester\tNote\n"
+        "12345\tSchneider, Lena\tSE Master\t3\t1.7\n"
+    )
+    response = client.post(
+        "/api/upload/preview/",
+        data={"paste": paste, "semester": "WISE_25", "nameSplitRule": "Last, First"},
+    )
+    assert response.status_code == 200
+    row = response.json()["preview_data"][0]
+    assert row["student_id"] == "12345"
+    assert row["grade"] == "1.7"
+    assert row["is_valid"] is True
+
+
 def test_preview_ignores_a_mapping_that_targets_a_course_column():
     """A mapping naming a course column is dropped instead of renaming a field onto it."""
     paste = "Matrikelnr,Name,Program,Semester,Grade,Kursnummer\n41010,Ada Lovelace,SE Master,1,2.0,4711\n"
