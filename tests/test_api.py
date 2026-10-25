@@ -82,7 +82,6 @@ def test_upload_preview_paste_tsv():
             "paste": paste,
             "course": "TEST101",
             "courseName": "Test Course",
-            "ects": "6",
             "semester": "WISE_25",
             "mapping": PASTE_MAPPING,
             "nameSplitRule": "Last, First",
@@ -149,7 +148,6 @@ def test_paste_preview_then_confirm():
         json={
             "course": "PASTE101",
             "courseName": "Paste Course",
-            "ects": "6",
             "semester": "WISE_25",
             "records": [
                 {
@@ -176,7 +174,6 @@ def test_upload_preview_invalid_grade():
     data = {
         "course": "TEST101",
         "courseName": "Test Course",
-        "ects": "6",
         "semester": "WISE_25", "mapping": '{"Matrikelnr": "student_id", "Name": "name", "Program": "program", "Grade": "grade"}'
     }
     response = client.post("/api/upload/preview/", files=files, data=data)
@@ -193,7 +190,6 @@ def test_upload_confirm_valid_grade():
     payload = {
         "course": "VALID101",
         "courseName": "Valid Course",
-        "ects": "6",
         "semester": "WISE_25", "mapping": '{"Matrikelnr": "student_id", "Name": "name", "Program": "program", "Grade": "grade"}',
         "records": [
             {
@@ -262,7 +258,6 @@ def test_upload_preview_missing_program_is_valid():
     data = {
         "course": "TEST101",
         "courseName": "Test Course",
-        "ects": "6",
         "semester": "WISE_25",
         "mapping": PASTE_MAPPING,
     }
@@ -282,7 +277,6 @@ def test_upload_preview_unknown_program_is_flagged():
     data = {
         "course": "TEST101",
         "courseName": "Test Course",
-        "ects": "6",
         "semester": "WISE_25",
         "mapping": PASTE_MAPPING,
     }
@@ -299,7 +293,6 @@ def test_upload_confirm_rejects_unknown_program():
     payload = {
         "course": "PROG101",
         "courseName": "Program Course",
-        "ects": "6",
         "semester": "WISE_25",
         "records": [
             {
@@ -320,7 +313,6 @@ def test_upload_confirm_stores_attempt_type_and_placeholder_program():
     payload = {
         "course": "ATT101",
         "courseName": "Attempt Course",
-        "ects": "6",
         "semester": "WISE_25",
         "attemptType": "Exam 2",
         "records": [
@@ -365,7 +357,6 @@ def test_upload_confirm_defaults_attempt_type():
     payload = {
         "course": "ATT102",
         "courseName": "Default Attempt Course",
-        "ects": "6",
         "semester": "WISE_25",
         "records": [
             {
@@ -392,7 +383,6 @@ def test_upload_confirm_rejects_unknown_attempt_type():
     payload = {
         "course": "ATT103",
         "courseName": "Bad Attempt Course",
-        "ects": "6",
         "semester": "WISE_25",
         "attemptType": "Exam 7",
         "records": [
@@ -414,7 +404,6 @@ def test_transcript_exposes_attempt_type():
     payload = {
         "course": "TRA101",
         "courseName": "Transcript Course",
-        "ects": "6",
         "semester": "WISE_25",
         "attemptType": "Exam 2",
         "records": [
@@ -490,7 +479,6 @@ def test_confirm_rejects_status_codes():
     payload = {
         "course": "ABSENCE101",
         "courseName": "Absence Course",
-        "ects": "6",
         "semester": "WISE_25",
         "records": [
             {
@@ -510,7 +498,6 @@ def test_confirm_rejects_passed_text_as_a_grade():
     payload = {
         "course": "LABEL101",
         "courseName": "Label Course",
-        "ects": "6",
         "semester": "WISE_25",
         "records": [
             {
@@ -531,7 +518,6 @@ def test_batch_grade_update_ignores_client_passed_flag():
     payload = {
         "course": "RECALC101",
         "courseName": "Recalc Course",
-        "ects": "6",
         "semester": "WISE_25",
         "records": [
             {
@@ -567,7 +553,6 @@ def _import_one_grade(student_id: str, course: str, grade: str) -> dict:
     payload = {
         "course": course,
         "courseName": f"{course} Course",
-        "ects": "6",
         "semester": "WISE_25",
         "records": [
             {
@@ -639,7 +624,6 @@ def test_excused_attempts_are_excluded_from_pass_rate_and_at_risk():
     payload = {
         "course": "EXCUSE101",
         "courseName": "Excuse Course",
-        "ects": "6",
         "semester": "WISE_25",
         "records": [
             {
@@ -764,6 +748,27 @@ def test_preview_rejects_unknown_header_even_when_client_maps_it():
     assert "Email" in response.json()["detail"]
 
 
+def test_preview_ignores_ects_columns_in_the_file():
+    paste = (
+        "Matrikelnr\tName\tProgram\tSemester\tGrade\tECTS\tCredits\n"
+        "41002\tSchneider, Lena\tSE Master\t3\t1.7\t6\t6\n"
+    )
+    response = client.post(
+        "/api/upload/preview/",
+        data={
+            "paste": paste,
+            "semester": "WISE_25",
+            "mapping": PASTE_MAPPING,
+            "nameSplitRule": "Last, First",
+        },
+    )
+    assert response.status_code == 200
+    row = response.json()["preview_data"][0]
+    assert row["is_valid"] is True
+    for key in ("ECTS", "ects", "Credits", "credits"):
+        assert key not in row
+
+
 def test_preview_rejects_two_columns_that_standardise_to_name():
     paste = (
         "Matrikelnr\tName\tFull Name\tGrade\n"
@@ -827,7 +832,6 @@ def test_confirm_attaches_records_to_the_active_course_id():
         "courseId": 3545,
         # Deliberately stale: the id is what decides where the batch lands.
         "courseName": "Typed Something Else",
-        "ects": "6",
         "semester": "WISE_25",
         "attemptType": "Exam 1",
         "records": [
@@ -869,7 +873,6 @@ def test_course_without_submissions_reports_zeros_until_the_first_one_arrives():
     payload = {
         "courseId": 3546,
         "courseName": "Empty Course",
-        "ects": "6",
         "semester": "WISE_25",
         "attemptType": "Exam 1",
         "records": [
@@ -895,7 +898,6 @@ def test_confirm_rejects_an_unknown_course_id():
     payload = {
         "courseId": 999999,
         "courseName": "Ghost Course",
-        "ects": "6",
         "semester": "WISE_25",
         "records": [
             {
@@ -920,7 +922,6 @@ def test_confirm_without_a_course_id_still_matches_by_name():
     payload = {
         "course": "3545",
         "courseName": "Standalone Course",
-        "ects": "6",
         "semester": "WISE_25",
         "records": [
             {
@@ -1070,6 +1071,4 @@ def test_convert_paste_to_excel():
     df = pd.read_excel(io.BytesIO(res.content), engine="openpyxl")
     assert len(df) == 1
     assert df.iloc[0]["Matrikelnr"] == 9999
-
-
 

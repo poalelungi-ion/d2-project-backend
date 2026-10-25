@@ -41,15 +41,34 @@ COURSE_COLUMN_NAMES = frozenset(
     }
 )
 
+# ECTS/credits are not tracked. Drop those headers so they cannot be mapped
+# onto a field or fail a later closed-name check.
+ECTS_COLUMN_NAMES = frozenset(
+    {
+        "ects",
+        "credit",
+        "credits",
+        "ectscredit",
+        "ectscredits",
+        "kreditpunkte",
+        "leistungspunkte",
+    }
+)
+
 
 def is_course_column(name: object) -> bool:
     """True for a header naming the course, in English or German, however punctuated."""
     return "".join(ch for ch in str(name).lower() if ch.isalnum()) in COURSE_COLUMN_NAMES
 
 
+def is_ects_column(name: object) -> bool:
+    """True for a header naming ECTS / credits, however punctuated."""
+    return "".join(ch for ch in str(name).lower() if ch.isalnum()) in ECTS_COLUMN_NAMES
+
+
 def _is_dropped_column(name: object) -> bool:
-    """Headers the parser never reads: pass/fail labels and course identifiers."""
-    return is_ignored_column(name) or is_course_column(name)
+    """Headers the parser never reads: pass/fail labels, course ids, and ECTS."""
+    return is_ignored_column(name) or is_course_column(name) or is_ects_column(name)
 
 
 def _paste_separator(header_line: str) -> Optional[str]:
@@ -114,7 +133,6 @@ async def preview_upload(
     paste: Optional[str],
     course: Optional[str],
     courseName: Optional[str],
-    ects: Optional[str],
     semester: Optional[str],
     mapping: Optional[str],
     nameSplitRule: Optional[str],
@@ -141,6 +159,7 @@ async def preview_upload(
 
         # Pass/fail labels and course identifiers are noise. Drop them before
         # the remaining headers are checked against the closed name list.
+        # ECTS/credits are also not tracked and are removed before validation.
         drop = [col for col in df.columns if _is_dropped_column(col)]
         if drop:
             df = df.drop(columns=drop)
@@ -348,4 +367,3 @@ def convert_paste_to_excel(paste_text: str, filename: Optional[str] = "pasted_ta
         media_type="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
         headers={"Content-Disposition": f'attachment; filename="{safe_name}"'},
     )
-

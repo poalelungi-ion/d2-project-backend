@@ -13,7 +13,6 @@ BASE_URL = os.getenv("SMOKE_BASE_URL", "http://localhost:8000")
 payload = {
     "course": "TEST101",
     "courseName": "Test Course",
-    "ects": "6",
     "semester": "WISE_25",
     "records": [
         {
