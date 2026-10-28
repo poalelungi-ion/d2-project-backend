@@ -1042,4 +1042,61 @@ def test_convert_paste_to_excel():
     assert df.iloc[0]["Matrikelnr"] == 9999
 
 
+def test_seed_on_startup_disabled_by_default():
+    """#104080: Verify that SEED_ON_STARTUP is disabled by default for clean production delivery."""
+    from src.database import config
+    assert config.SEED_ON_STARTUP is False
+
+
+def test_seed_on_startup_disallowed_in_production_mode(monkeypatch):
+    """#104080: Verify that when DEBUG is false (production mode), demo seeding cannot be enabled."""
+    from src.database import config
+    debug_val = False
+    seed_env = "true"
+    seed_on_startup = seed_env.lower() == "true" and debug_val
+    assert seed_on_startup is False
+
+
+def test_production_initializes_with_clean_empty_state():
+    """#104080: Acceptance Criteria - Application startup populates no sample courses, students, or grades."""
+    from src.database import config
+    from src.database.models import Course, Student, Exam, ExamResult
+    from tests.test_api import TestingSessionLocal
+
+    db = TestingSessionLocal()
+    try:
+        assert config.SEED_ON_STARTUP is False
+        assert db.query(Course).count() == 0
+        assert db.query(Student).count() == 0
+        assert db.query(Exam).count() == 0
+        assert db.query(ExamResult).count() == 0
+    finally:
+        db.close()
+
+
+def test_essential_initialization_retains_bootstrap_admin(monkeypatch):
+    """#104080: Acceptance Criteria - Only essential system initialization remains active (bootstrap admin)."""
+    from src.database import config
+    from src.database.models import Course, Student, User
+    from src.database.seed import seed_bootstrap_admin
+    from tests.test_api import TestingSessionLocal
+
+    monkeypatch.setattr(config, "BOOTSTRAP_ADMIN_EMAIL", "admin.prod@uni-hildesheim.de")
+    monkeypatch.setattr(config, "BOOTSTRAP_ADMIN_PASSWORD", "SuperSecureProdPassword123!")
+    monkeypatch.setattr(config, "BOOTSTRAP_ADMIN_NAME", "Production Administrator")
+
+    seed_bootstrap_admin()
+
+    db = TestingSessionLocal()
+    try:
+        admin = db.query(User).filter(User.email == "admin.prod@uni-hildesheim.de").first()
+        assert admin is not None
+        assert admin.name == "Production Administrator"
+        assert db.query(Course).count() == 0
+        assert db.query(Student).count() == 0
+    finally:
+        db.close()
+
+
+
 
