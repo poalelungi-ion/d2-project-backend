@@ -18,6 +18,7 @@ from src.services.grade_outcome import (
     evaluate_grade,
     is_filtered_status_code,
     is_ignored_column,
+    is_valid_numeric_grade,
 )
 
 _FILE_EXTENSIONS = (".xlsx", ".xls", ".csv", ".tsv", ".ods")
@@ -184,8 +185,9 @@ async def preview_upload(
                 if str(record[k]).lower() == "nan":
                     record[k] = ""
 
-            # NE/EX/NA/TA/AT are not grades. Drop the row so the student is not tracked.
-            if is_filtered_status_code(record["grade"]):
+            # NE/EX/NA/TA/AT are not grades. Empty cells have no grade.
+            # Skip rows where a student has no grade (#104085)
+            if not record["grade"].strip() or is_filtered_status_code(record["grade"]):
                 continue
 
             # Fill the placeholder or normalize common abbreviations here so the review
@@ -269,7 +271,28 @@ def confirm_upload(db: Session, req: UploadConfirmRequest):
     Guarantees that on any exception, db.rollback() executes and no partial data remains.
     """
     try:
-        # 1. Resolve the course — the active one when the upload came from a Course view
+        # [Ticket #104085: Exclude students without valid grades from database persistence]
+        # Rows lacking a valid numeric grade are excluded from persistence.
+        # No orphan student profiles without exam grade entries are created in PostgreSQL.
+        valid_records = []
+        for rec in req.records:
+            if not is_valid_numeric_grade(rec.grade):
+                continue
+            try:
+                verdict = evaluate_grade(rec.grade)
+                if verdict.grade is not None and 1.0 <= verdict.grade <= 5.0:
+                    valid_records.append((rec, verdict))
+            except UnrecognizedGrade:
+                continue
+
+        # If records were sent but none have a valid numeric grade, reject with 400
+        if req.records and not valid_records:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="No records with valid numeric grades to import.",
+            )
+
+        # 1. Resolve the course -- the active one when the upload came from a Course view
         course_obj = resolve_course(db, req)
 
         # 2. Ensure exam exists
@@ -283,9 +306,15 @@ def confirm_upload(db: Session, req: UploadConfirmRequest):
             db.add(exam)
             db.flush()
 
-        # 3. Process records
-        for rec in req.records:
-            sid = int(float(rec.student_id))
+        # 3. Process records (only valid records are persisted; students are only created
+        # when an exam result is also created, preventing orphan student profiles)
+        imported_count = 0
+        for rec, verdict in valid_records:
+            try:
+                sid = int(float(rec.student_id))
+            except (ValueError, TypeError):
+                continue
+
             student = db.query(Student).filter(Student.student_id == sid).first()
 
             if not student:
@@ -302,14 +331,6 @@ def confirm_upload(db: Session, req: UploadConfirmRequest):
                 db.add(student)
                 db.flush()
 
-            try:
-                verdict = evaluate_grade(rec.grade)
-            except UnrecognizedGrade as exc:
-                raise HTTPException(
-                    status_code=status.HTTP_400_BAD_REQUEST,
-                    detail=f"Invalid grade for student {sid}: {exc}",
-                ) from exc
-
             res = ExamResult(
                 student_id=student.student_id,
                 exam_id=exam.exam_id,
@@ -319,11 +340,12 @@ def confirm_upload(db: Session, req: UploadConfirmRequest):
                 attempt_type=req.attemptType,
             )
             db.add(res)
+            imported_count += 1
 
         db.commit()
         return {
             "status": "success",
-            "message": f"Successfully imported {len(req.records)} records.",
+            "message": f"Successfully imported {imported_count} records.",
             "course_id": course_obj.course_id,
         }
     except HTTPException:

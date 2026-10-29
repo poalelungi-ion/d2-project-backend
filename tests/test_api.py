@@ -1046,3 +1046,112 @@ def test_student_creation_and_update_without_status_field_104082():
     assert updated_details["name"] == "Status Deprecated Updated"
     assert updated_details["program"] == "Data Science Master"
     assert updated_details["status"] == "active"
+
+
+
+def test_preview_skips_rows_without_grades_104085():
+    """Ticket #104085: Ingestion skips rows where students have no valid grade."""
+    paste = (
+        "Matrikelnr\tName\tProgram\tSemester\tGrade\n"
+        "81001\tValid, One\tSE Master\tWISE_25\t1.7\n"
+        "81002\tEmpty, Student\tSE Master\tWISE_25\t\n"
+        "81003\tWhitespace, Student\tSE Master\tWISE_25\t   \n"
+        "81004\tNoShow, Student\tSE Master\tWISE_25\tNE\n"
+        "81005\tValid, Two\tSE Master\tWISE_25\t2.3\n"
+    )
+    response = client.post(
+        "/api/upload/preview/",
+        data={
+            "paste": paste,
+            "semester": "WISE_25",
+            "mapping": PASTE_MAPPING,
+            "nameSplitRule": "Last, First",
+        },
+    )
+    assert response.status_code == 200
+    preview_data = response.json()["preview_data"]
+    student_ids = [row["student_id"] for row in preview_data]
+    assert student_ids == ["81001", "81005"]
+
+
+def test_confirm_excludes_rows_without_valid_numeric_grades_and_prevents_orphan_students_104085():
+    """Ticket #104085: Confirm excludes rows lacking valid numeric grades and creates no orphan students."""
+    payload = {
+        "course": "VALIDATE101",
+        "courseName": "Grade Validation Course",
+        "ects": "6",
+        "semester": "WISE_25",
+        "records": [
+            {
+                "student_id": "82001",
+                "first_name": "Valid",
+                "last_name": "One",
+                "program": "SE Master",
+                "semester": "WISE_25",
+                "grade": "1.3",
+            },
+            {
+                "student_id": "82002",
+                "first_name": "Empty",
+                "last_name": "Grade",
+                "program": "SE Master",
+                "semester": "WISE_25",
+                "grade": "",
+            },
+            {
+                "student_id": "82003",
+                "first_name": "Absence",
+                "last_name": "Code",
+                "program": "SE Master",
+                "semester": "WISE_25",
+                "grade": "NE",
+            },
+            {
+                "student_id": "82004",
+                "first_name": "Label",
+                "last_name": "Only",
+                "program": "SE Master",
+                "semester": "WISE_25",
+                "grade": "Passed",
+            },
+            {
+                "student_id": "82005",
+                "first_name": "Invalid",
+                "last_name": "Text",
+                "program": "SE Master",
+                "semester": "WISE_25",
+                "grade": "invalid",
+            },
+            {
+                "student_id": "82006",
+                "first_name": "Valid",
+                "last_name": "Two",
+                "program": "SE Master",
+                "semester": "WISE_25",
+                "grade": "2.7",
+            },
+        ],
+    }
+
+    # 1. Batch confirm should succeed and report exactly 2 imported records
+    confirm = client.post("/api/upload/confirm/", json=payload)
+    assert confirm.status_code == 200
+    assert confirm.json()["message"] == "Successfully imported 2 records."
+
+    # 2. Valid students are persisted with their exam grades
+    s1 = client.get("/api/students/82001")
+    assert s1.status_code == 200
+    assert s1.json()["student_id"] == 82001
+    assert len(s1.json()["transcript"]) == 1
+    assert s1.json()["transcript"][0]["grade"] == 1.3
+
+    s2 = client.get("/api/students/82006")
+    assert s2.status_code == 200
+    assert s2.json()["student_id"] == 82006
+    assert len(s2.json()["transcript"]) == 1
+    assert s2.json()["transcript"][0]["grade"] == 2.7
+
+    # 3. No orphan student profiles without exam grades exist for skipped rows
+    for missing_sid in (82002, 82003, 82004, 82005):
+        lookup = client.get(f"/api/students/{missing_sid}")
+        assert lookup.status_code == 404, f"Student {missing_sid} should not have been created in PostgreSQL"
