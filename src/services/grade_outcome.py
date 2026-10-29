@@ -1,9 +1,9 @@
 """
 Single source of truth for pass/fail.
 
-Numeric German grades (1.0–5.0, pass is <= 4.0) and official absence codes in
-the grade cell decide the outcome. Labels such as Passed/Failed/Yes/No are
-never interpreted as a result — they are noise from source spreadsheets.
+Only numeric German grades (1.0–5.0, pass is <= 4.0) are tracked. Status codes
+such as NE, EX, NA, TA and AT are not grades — they are filtered out of import
+and rejected on save.
 """
 from __future__ import annotations
 
@@ -14,13 +14,17 @@ OUTCOME_PASSED = "passed"
 OUTCOME_FAILED = "failed"
 OUTCOME_EXCUSED = "excused"
 
-# NE = no show, EX = disqualified → fail. AT = medical note → excused.
-FAIL_ABSENCE_CODES = frozenset({"NE", "EX"})
-EXCUSED_ABSENCE_CODES = frozenset({"AT"})
+# Grade-cell values that must not enter tracking.
+FILTERED_STATUS_CODES = frozenset({"NE", "EX", "NA", "TA", "AT"})
 
 # Spreadsheet columns or grade-cell labels the parser must never treat as a result.
 IGNORED_RESULT_LABELS = frozenset({"PASSED", "FAILED", "YES", "NO"})
 IGNORED_COLUMN_NAMES = frozenset({"passed", "failed", "yes", "no"})
+
+STATUS_CODE_MESSAGE = (
+    "Status codes such as NE, EX, NA and TA are not grades; "
+    "only numeric marks from 1.0 to 5.0 are tracked"
+)
 
 
 @dataclass(frozen=True)
@@ -34,20 +38,30 @@ class GradeVerdict:
 
 
 class UnrecognizedGrade(ValueError):
-    """The cell was not a numeric grade and not NE/EX/AT."""
+    """The cell was not a numeric grade on the 1.0–5.0 scale."""
 
 
 def _normalize_code(raw: str) -> str:
     return raw.strip().upper().replace(".", "").replace(" ", "")
 
 
+def is_filtered_status_code(raw: object) -> bool:
+    """True for NE/EX/NA/TA/AT (any punctuation or case). Empty cells are not status codes."""
+    if raw is None:
+        return False
+    text = str(raw).strip()
+    if not text or text.lower() == "nan":
+        return False
+    return _normalize_code(text) in FILTERED_STATUS_CODES
+
+
 def evaluate_grade(raw: object) -> GradeVerdict:
     """
     Interpret one grade cell.
 
-    NE/EX → fail (recorded as 5.0). AT → excused (no numeric grade).
     A number in 1.0–5.0 → pass iff it is <= 4.0.
-    Passed/Failed/Yes/No and anything else raise UnrecognizedGrade.
+    Status codes (NE, EX, NA, TA, AT), Pass/Fail labels, and anything else
+    raise UnrecognizedGrade.
     """
     if raw is None:
         raise UnrecognizedGrade("Missing grade")
@@ -59,12 +73,10 @@ def evaluate_grade(raw: object) -> GradeVerdict:
     code = _normalize_code(text)
     if code in IGNORED_RESULT_LABELS:
         raise UnrecognizedGrade(
-            "Pass/fail labels are ignored; provide a numeric grade or NE/EX/AT"
+            "Pass/fail labels are ignored; provide a numeric grade from 1.0 to 5.0"
         )
-    if code in FAIL_ABSENCE_CODES:
-        return GradeVerdict(grade=5.0, passed=False, outcome=OUTCOME_FAILED, absence_code=code)
-    if code in EXCUSED_ABSENCE_CODES:
-        return GradeVerdict(grade=None, passed=False, outcome=OUTCOME_EXCUSED, absence_code=code)
+    if code in FILTERED_STATUS_CODES:
+        raise UnrecognizedGrade(STATUS_CODE_MESSAGE)
 
     try:
         grade = float(text.replace(",", "."))
