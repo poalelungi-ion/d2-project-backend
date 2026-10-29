@@ -37,6 +37,7 @@ def get_all_students(db: Session):
             "student_id": s.student_id,
             "name": s.name,
             "program": s.program,
+            "study_program": s.program,
             "status": s.status,
             "total_exams": len(results),
             "passed_exams": passed,
@@ -87,6 +88,7 @@ def get_student_details(db: Session, student_id: int):
         "student_id": student.student_id,
         "name": student.name,
         "program": student.program,
+        "study_program": student.program,
         "status": student.status,
         "version": student.version,
         "transcript": transcript,
@@ -101,17 +103,25 @@ def create_student(db: Session, student_dto: StudentCreate):
     if existing:
         raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail="Student ID already exists")
 
+    resolved_program = student_dto.study_program or student_dto.program or "SE Master"
     new_student = Student(
         student_id=student_dto.student_id,
         name=student_dto.name,
-        program=student_dto.program,
+        program=resolved_program,
         status=student_dto.status or "active",
     )
     try:
         db.add(new_student)
         db.commit()
         db.refresh(new_student)
-        return {"status": "success", "student_id": new_student.student_id}
+        return {
+            "status": "success",
+            "student_id": new_student.student_id,
+            "name": new_student.name,
+            "program": new_student.program,
+            "study_program": new_student.program,
+            "version": new_student.version,
+        }
     except Exception:
         db.rollback()
         raise
@@ -134,14 +144,25 @@ def update_student(db: Session, student_id: int, update_dto: StudentUpdate):
             raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail="Student ID already exists")
         student.student_id = update_dto.new_student_id
 
-    student.program = update_dto.program
-    student.name = update_dto.name
+    resolved_program = update_dto.study_program or update_dto.program
+    if resolved_program:
+        student.program = resolved_program
+    if update_dto.name is not None:
+        student.name = update_dto.name
     if update_dto.status is not None:
         student.status = update_dto.status
 
     try:
         db.commit()
-        return {"status": "success"}
+        db.refresh(student)
+        return {
+            "status": "success",
+            "student_id": student.student_id,
+            "name": student.name,
+            "program": student.program,
+            "study_program": student.program,
+            "version": student.version,
+        }
     except StaleDataError:
         db.rollback()
         raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail="Data modified by another user. Please refresh.")

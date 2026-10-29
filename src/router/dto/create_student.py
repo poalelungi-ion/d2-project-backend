@@ -11,14 +11,16 @@ from src.lib.study_program import NamedStudyProgram
 class StudentCreate(BaseModel):
     student_id: int
     name: str
-    program: NamedStudyProgram = "SE Master"
+    program: Optional[NamedStudyProgram] = "SE Master"
+    study_program: Optional[NamedStudyProgram] = None
     status: Optional[str] = "active"
 
 
 class StudentUpdate(BaseModel):
     new_student_id: Optional[int] = None
-    program: NamedStudyProgram
-    name: str
+    program: Optional[NamedStudyProgram] = None
+    study_program: Optional[NamedStudyProgram] = None
+    name: Optional[str] = None
     status: Optional[str] = None
     version: int
 

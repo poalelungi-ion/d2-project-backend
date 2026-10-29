@@ -25,6 +25,14 @@ class Student(Base):
 
     results = relationship("ExamResult", back_populates="student", cascade="all, delete-orphan")
 
+    @property
+    def study_program(self):
+        return self.program
+
+    @study_program.setter
+    def study_program(self, val):
+        self.program = val
+
 
 class ExamResult(Base):
     __tablename__ = "exam_results"
