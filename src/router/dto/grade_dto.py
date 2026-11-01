@@ -8,7 +8,7 @@ from pydantic import BaseModel, field_validator
 class GradeUpdate(BaseModel):
     result_id: int
     version: int
-    # Same cells as upload: 1.0–5.0, or NE/EX/AT. Pass/fail is never taken from
+    # Same cells as upload: numeric 1.0–5.0 only. Pass/fail is never taken from
     # a client flag; evaluate_grade recomputes it.
     grade: Union[float, str]
     # Ignored if sent. Pass/fail is always recomputed from the grade cell.

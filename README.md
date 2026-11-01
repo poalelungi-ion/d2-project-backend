@@ -180,7 +180,7 @@ Copy `.env.example` to `.env` to override them.
 | `COOKIE_SAMESITE` | `lax` | SameSite flag on the refresh cookie |
 | `DEBUG` | `true` | `false` turns the startup warnings into errors |
 | `CORS_ORIGINS` | `http://localhost:5173,http://127.0.0.1:5173` | Comma-separated allow-list |
-| `SEED_ON_STARTUP` | `true` | Seed demonstration data into an empty database |
+| `SEED_ON_STARTUP` | `false` | Seed demonstration data into an empty database (disabled in production delivery) |
 | `BOOTSTRAP_ADMIN_EMAIL` / `_PASSWORD` | empty | Optional first account, created only while `users` is empty |
 
 Two of these are not really optional outside development:

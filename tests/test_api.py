@@ -82,7 +82,6 @@ def test_upload_preview_paste_tsv():
             "paste": paste,
             "course": "TEST101",
             "courseName": "Test Course",
-            "ects": "6",
             "semester": "WISE_25",
             "mapping": PASTE_MAPPING,
             "nameSplitRule": "Last, First",
@@ -149,7 +148,6 @@ def test_paste_preview_then_confirm():
         json={
             "course": "PASTE101",
             "courseName": "Paste Course",
-            "ects": "6",
             "semester": "WISE_25",
             "records": [
                 {
@@ -176,7 +174,6 @@ def test_upload_preview_invalid_grade():
     data = {
         "course": "TEST101",
         "courseName": "Test Course",
-        "ects": "6",
         "semester": "WISE_25", "mapping": '{"Matrikelnr": "student_id", "Name": "name", "Program": "program", "Grade": "grade"}'
     }
     response = client.post("/api/upload/preview/", files=files, data=data)
@@ -193,7 +190,6 @@ def test_upload_confirm_valid_grade():
     payload = {
         "course": "VALID101",
         "courseName": "Valid Course",
-        "ects": "6",
         "semester": "WISE_25", "mapping": '{"Matrikelnr": "student_id", "Name": "name", "Program": "program", "Grade": "grade"}',
         "records": [
             {
@@ -262,7 +258,6 @@ def test_upload_preview_missing_program_is_valid():
     data = {
         "course": "TEST101",
         "courseName": "Test Course",
-        "ects": "6",
         "semester": "WISE_25",
         "mapping": PASTE_MAPPING,
     }
@@ -282,7 +277,6 @@ def test_upload_preview_unknown_program_is_flagged():
     data = {
         "course": "TEST101",
         "courseName": "Test Course",
-        "ects": "6",
         "semester": "WISE_25",
         "mapping": PASTE_MAPPING,
     }
@@ -299,7 +293,6 @@ def test_upload_confirm_rejects_unknown_program():
     payload = {
         "course": "PROG101",
         "courseName": "Program Course",
-        "ects": "6",
         "semester": "WISE_25",
         "records": [
             {
@@ -320,7 +313,6 @@ def test_upload_confirm_stores_attempt_type_and_placeholder_program():
     payload = {
         "course": "ATT101",
         "courseName": "Attempt Course",
-        "ects": "6",
         "semester": "WISE_25",
         "attemptType": "Exam 2",
         "records": [
@@ -365,7 +357,6 @@ def test_upload_confirm_defaults_attempt_type():
     payload = {
         "course": "ATT102",
         "courseName": "Default Attempt Course",
-        "ects": "6",
         "semester": "WISE_25",
         "records": [
             {
@@ -392,7 +383,6 @@ def test_upload_confirm_rejects_unknown_attempt_type():
     payload = {
         "course": "ATT103",
         "courseName": "Bad Attempt Course",
-        "ects": "6",
         "semester": "WISE_25",
         "attemptType": "Exam 7",
         "records": [
@@ -414,7 +404,6 @@ def test_transcript_exposes_attempt_type():
     payload = {
         "course": "TRA101",
         "courseName": "Transcript Course",
-        "ects": "6",
         "semester": "WISE_25",
         "attemptType": "Exam 2",
         "records": [
@@ -438,12 +427,14 @@ def test_transcript_exposes_attempt_type():
     assert entry["attempt"] == 1
 
 
-def test_preview_absence_codes_and_ignores_passed_column():
+def test_preview_filters_status_codes_and_ignores_passed_column():
     paste = (
         "Matrikelnr\tName\tProgram\tSemester\tGrade\tPassed\n"
         "31001\tSchneider, Lena\tSE Master\t3\tNE\tYes\n"
         "31002\tBecker, Leon\tSE Master\t3\tEX\tPassed\n"
         "31003\tWagner, Sophie\tSE Master\t3\tAT\tNo\n"
+        "31005\tKlein, Jonas\tSE Master\t3\tNA\tYes\n"
+        "31006\tLang, Mira\tSE Master\t3\tTA\tNo\n"
         "31004\tHoffmann, Marie\tSE Master\t3\t1.7\tFailed\n"
     )
     response = client.post(
@@ -457,13 +448,7 @@ def test_preview_absence_codes_and_ignores_passed_column():
     )
     assert response.status_code == 200
     rows = {row["student_id"]: row for row in response.json()["preview_data"]}
-    assert rows["31001"]["outcome"] == "failed"
-    assert rows["31001"]["absence_code"] == "NE"
-    assert rows["31001"]["is_valid"] is True
-    assert rows["31002"]["outcome"] == "failed"
-    assert rows["31002"]["absence_code"] == "EX"
-    assert rows["31003"]["outcome"] == "excused"
-    assert rows["31003"]["absence_code"] == "AT"
+    assert set(rows) == {"31004"}
     # File said Failed; the numeric grade is the only source of truth.
     assert rows["31004"]["grade"] == "1.7"
     assert rows["31004"]["outcome"] == "passed"
@@ -490,11 +475,10 @@ def test_preview_rejects_passed_text_in_the_grade_cell():
     assert row["outcome"] == "invalid"
 
 
-def test_confirm_persists_absence_outcomes():
+def test_confirm_rejects_status_codes():
     payload = {
         "course": "ABSENCE101",
         "courseName": "Absence Course",
-        "ects": "6",
         "semester": "WISE_25",
         "records": [
             {
@@ -504,35 +488,16 @@ def test_confirm_persists_absence_outcomes():
                 "program": "SE Master",
                 "semester": "WISE_25",
                 "grade": "NE",
-            },
-            {
-                "student_id": "31022",
-                "first_name": "Med",
-                "last_name": "Note",
-                "program": "SE Master",
-                "semester": "WISE_25",
-                "grade": "AT",
-            },
+            }
         ],
     }
-    assert client.post("/api/upload/confirm/", json=payload).status_code == 200
-    ne = client.get("/api/students/31021").json()["transcript"][0]
-    at = client.get("/api/students/31022").json()["transcript"][0]
-    assert ne["passed"] is False
-    assert ne["outcome"] == "failed"
-    assert ne["absence_code"] == "NE"
-    assert ne["grade"] == 5.0
-    assert at["passed"] is False
-    assert at["outcome"] == "excused"
-    assert at["absence_code"] == "AT"
-    assert at["grade"] is None
+    assert client.post("/api/upload/confirm/", json=payload).status_code == 400
 
 
 def test_confirm_rejects_passed_text_as_a_grade():
     payload = {
         "course": "LABEL101",
         "courseName": "Label Course",
-        "ects": "6",
         "semester": "WISE_25",
         "records": [
             {
@@ -553,7 +518,6 @@ def test_batch_grade_update_ignores_client_passed_flag():
     payload = {
         "course": "RECALC101",
         "courseName": "Recalc Course",
-        "ects": "6",
         "semester": "WISE_25",
         "records": [
             {
@@ -589,7 +553,6 @@ def _import_one_grade(student_id: str, course: str, grade: str) -> dict:
     payload = {
         "course": course,
         "courseName": f"{course} Course",
-        "ects": "6",
         "semester": "WISE_25",
         "records": [
             {
@@ -614,31 +577,31 @@ def test_batch_grade_update_accepts_the_same_cells_as_upload():
             {
                 "result_id": entry["result_id"],
                 "version": entry["version"],
-                "grade": "NE",
+                "grade": "2.3",
             }
         ],
     )
     assert response.status_code == 200
-    failed = client.get("/api/students/31041").json()["transcript"][0]
-    assert failed["grade"] == 5.0
-    assert failed["outcome"] == "failed"
-    assert failed["absence_code"] == "NE"
+    updated = client.get("/api/students/31041").json()["transcript"][0]
+    assert updated["grade"] == 2.3
+    assert updated["outcome"] == "passed"
+    assert updated["absence_code"] is None
 
-    excused = client.post(
-        "/api/grades/",
-        json=[
-            {
-                "result_id": failed["result_id"],
-                "version": failed["version"],
-                "grade": "AT",
-            }
-        ],
-    )
-    assert excused.status_code == 200
-    sitting = client.get("/api/students/31041").json()["transcript"][0]
-    assert sitting["grade"] is None
-    assert sitting["outcome"] == "excused"
-    assert sitting["absence_code"] == "AT"
+
+def test_batch_grade_update_rejects_status_codes():
+    entry = _import_one_grade("31043", "EDIT103", "2.0")
+    for grade in ("NE", "EX", "NA", "TA", "AT"):
+        response = client.post(
+            "/api/grades/",
+            json=[
+                {
+                    "result_id": entry["result_id"],
+                    "version": entry["version"],
+                    "grade": grade,
+                }
+            ],
+        )
+        assert response.status_code == 422, grade
 
 
 def test_batch_grade_update_rejects_invalid_grades():
@@ -661,7 +624,6 @@ def test_excused_attempts_are_excluded_from_pass_rate_and_at_risk():
     payload = {
         "course": "EXCUSE101",
         "courseName": "Excuse Course",
-        "ects": "6",
         "semester": "WISE_25",
         "records": [
             {
@@ -679,14 +641,6 @@ def test_excused_attempts_are_excluded_from_pass_rate_and_at_risk():
                 "program": "SE Master",
                 "semester": "WISE_25",
                 "grade": "5.0",
-            },
-            {
-                "student_id": "31053",
-                "first_name": "Med",
-                "last_name": "Note",
-                "program": "SE Master",
-                "semester": "WISE_25",
-                "grade": "AT",
             },
             {
                 "student_id": "31053",
@@ -718,10 +672,8 @@ def test_excused_attempts_are_excluded_from_pass_rate_and_at_risk():
 
     courses = client.get("/api/courses/").json()
     course = next(c for c in courses if c["course_name"] == "Excuse Course")
-    assert course["total_attempts"] == 6
+    assert course["total_attempts"] == 5
     assert course["pass_rate"] == 20.0
-    mark = next(m for m in course["marks"] if m["student_id"] == 31053 and m["outcome"] == "excused")
-    assert mark["grade"] is None
 
     stats = client.get("/api/stats/").json()
     at_risk_ids = {row["student_id"] for row in stats["atRisk"]}
@@ -763,6 +715,89 @@ def test_preview_ignores_course_columns_in_the_file():
         assert key not in row
 
 
+def test_preview_rejects_unrecognized_column_names():
+    paste = (
+        "Matrikelnr\tName\tProgram\tSemester\tGrade\tEmail\n"
+        "12345\tSchneider, Lena\tSE Master\t3\t1.7\ta@uni.de\n"
+    )
+    response = client.post(
+        "/api/upload/preview/",
+        data={"paste": paste, "semester": "WISE_25", "nameSplitRule": "Last, First"},
+    )
+    assert response.status_code == 400
+    assert "Email" in response.json()["detail"]
+    assert "Matrikelnr" in response.json()["detail"]
+
+
+def test_preview_rejects_unknown_header_even_when_client_maps_it():
+    """A mapping cannot alias an unknown title onto a field — names are closed."""
+    paste = (
+        "Matrikelnr\tName\tProgram\tSemester\tEmail\n"
+        "12345\tSchneider, Lena\tSE Master\t3\t1.7\n"
+    )
+    response = client.post(
+        "/api/upload/preview/",
+        data={
+            "paste": paste,
+            "semester": "WISE_25",
+            "mapping": '{"Email": "grade", "Matrikelnr": "student_id", "Name": "name"}',
+            "nameSplitRule": "Last, First",
+        },
+    )
+    assert response.status_code == 400
+    assert "Email" in response.json()["detail"]
+
+
+def test_preview_ignores_ects_columns_in_the_file():
+    paste = (
+        "Matrikelnr\tName\tProgram\tSemester\tGrade\tECTS\tCredits\n"
+        "41002\tSchneider, Lena\tSE Master\t3\t1.7\t6\t6\n"
+    )
+    response = client.post(
+        "/api/upload/preview/",
+        data={
+            "paste": paste,
+            "semester": "WISE_25",
+            "mapping": PASTE_MAPPING,
+            "nameSplitRule": "Last, First",
+        },
+    )
+    assert response.status_code == 200
+    row = response.json()["preview_data"][0]
+    assert row["is_valid"] is True
+    for key in ("ECTS", "ects", "Credits", "credits"):
+        assert key not in row
+
+
+def test_preview_rejects_two_columns_that_standardise_to_name():
+    paste = (
+        "Matrikelnr\tName\tFull Name\tGrade\n"
+        "12345\tSchneider, Lena\tLena Schneider\t1.7\n"
+    )
+    response = client.post(
+        "/api/upload/preview/",
+        data={"paste": paste, "semester": "WISE_25", "nameSplitRule": "Last, First"},
+    )
+    assert response.status_code == 400
+    assert "Name" in response.json()["detail"]
+
+
+def test_preview_standardises_note_and_matrikelnummer_without_client_mapping():
+    paste = (
+        "Matrikelnummer\tName\tStudiengang\tFachsemester\tNote\n"
+        "12345\tSchneider, Lena\tSE Master\t3\t1.7\n"
+    )
+    response = client.post(
+        "/api/upload/preview/",
+        data={"paste": paste, "semester": "WISE_25", "nameSplitRule": "Last, First"},
+    )
+    assert response.status_code == 200
+    row = response.json()["preview_data"][0]
+    assert row["student_id"] == "12345"
+    assert row["grade"] == "1.7"
+    assert row["is_valid"] is True
+
+
 def test_preview_ignores_a_mapping_that_targets_a_course_column():
     """A mapping naming a course column is dropped instead of renaming a field onto it."""
     paste = "Matrikelnr,Name,Program,Semester,Grade,Kursnummer\n41010,Ada Lovelace,SE Master,1,2.0,4711\n"
@@ -797,7 +832,6 @@ def test_confirm_attaches_records_to_the_active_course_id():
         "courseId": 3545,
         # Deliberately stale: the id is what decides where the batch lands.
         "courseName": "Typed Something Else",
-        "ects": "6",
         "semester": "WISE_25",
         "attemptType": "Exam 1",
         "records": [
@@ -839,7 +873,6 @@ def test_course_without_submissions_reports_zeros_until_the_first_one_arrives():
     payload = {
         "courseId": 3546,
         "courseName": "Empty Course",
-        "ects": "6",
         "semester": "WISE_25",
         "attemptType": "Exam 1",
         "records": [
@@ -865,7 +898,6 @@ def test_confirm_rejects_an_unknown_course_id():
     payload = {
         "courseId": 999999,
         "courseName": "Ghost Course",
-        "ects": "6",
         "semester": "WISE_25",
         "records": [
             {
@@ -890,7 +922,6 @@ def test_confirm_without_a_course_id_still_matches_by_name():
     payload = {
         "course": "3545",
         "courseName": "Standalone Course",
-        "ects": "6",
         "semester": "WISE_25",
         "records": [
             {
@@ -1041,8 +1072,10 @@ def test_convert_paste_to_excel():
     assert len(df) == 1
     assert df.iloc[0]["Matrikelnr"] == 9999
 
-
-
+def test_seed_on_startup_disabled_by_default():
+    """#104080: Verify that SEED_ON_STARTUP is disabled by default for clean production delivery."""
+    from src.database import config
+    assert config.SEED_ON_STARTUP is False
 
 
 def test_student_creation_and_update_without_status_field_104082():
@@ -1078,3 +1111,53 @@ def test_student_creation_and_update_without_status_field_104082():
     assert updated_details["name"] == "Status Deprecated Updated"
     assert updated_details["program"] == "Data Science Master"
     assert updated_details["status"] == "active"
+
+
+def test_seed_on_startup_disallowed_in_production_mode(monkeypatch):
+    """#104080: Verify that when DEBUG is false (production mode), demo seeding cannot be enabled."""
+    from src.database import config
+    debug_val = False
+    seed_env = "true"
+    seed_on_startup = seed_env.lower() == "true" and debug_val
+    assert seed_on_startup is False
+
+
+def test_production_initializes_with_clean_empty_state():
+    """#104080: Acceptance Criteria - Application startup populates no sample courses, students, or grades."""
+    from src.database import config
+    from src.database.models import Course, Student, Exam, ExamResult
+    from tests.test_api import TestingSessionLocal
+
+    db = TestingSessionLocal()
+    try:
+        assert config.SEED_ON_STARTUP is False
+        assert db.query(Course).count() == 0
+        assert db.query(Student).count() == 0
+        assert db.query(Exam).count() == 0
+        assert db.query(ExamResult).count() == 0
+    finally:
+        db.close()
+
+
+def test_essential_initialization_retains_bootstrap_admin(monkeypatch):
+    """#104080: Acceptance Criteria - Only essential system initialization remains active (bootstrap admin)."""
+    from src.database import config
+    from src.database.models import Course, Student, User
+    from src.database.seed import seed_bootstrap_admin
+    from tests.test_api import TestingSessionLocal
+
+    monkeypatch.setattr(config, "BOOTSTRAP_ADMIN_EMAIL", "admin.prod@uni-hildesheim.de")
+    monkeypatch.setattr(config, "BOOTSTRAP_ADMIN_PASSWORD", "SuperSecureProdPassword123!")
+    monkeypatch.setattr(config, "BOOTSTRAP_ADMIN_NAME", "Production Administrator")
+
+    seed_bootstrap_admin()
+
+    db = TestingSessionLocal()
+    try:
+        admin = db.query(User).filter(User.email == "admin.prod@uni-hildesheim.de").first()
+        assert admin is not None
+        assert admin.name == "Production Administrator"
+        assert db.query(Course).count() == 0
+        assert db.query(Student).count() == 0
+    finally:
+        db.close()

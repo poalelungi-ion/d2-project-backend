@@ -71,7 +71,13 @@ _configured_origins = [
 CORS_WILDCARD_REQUESTED = "*" in _configured_origins
 CORS_ORIGINS = [o for o in _configured_origins if o != "*"] or DEV_CORS_ORIGINS
 
-SEED_ON_STARTUP = os.getenv("SEED_ON_STARTUP", "true").lower() == "true"
+# Demonstration data seeding (sample courses, students, and grades) is
+# disabled by default for clean production delivery.
+# In production mode (DEBUG=false), seeding demonstration data is strictly disallowed.
+SEED_ON_STARTUP = (
+    os.getenv("SEED_ON_STARTUP", "false").lower() == "true"
+    and DEBUG
+)
 
 # Optional first account, created on startup when the users table is empty so
 # a fresh deployment is reachable without hand-writing a bcrypt hash.
