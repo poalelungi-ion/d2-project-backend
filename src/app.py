@@ -49,7 +49,8 @@ async def lifespan(app: FastAPI):
     """
     Application lifespan manager.
     Validates the authentication configuration, runs database schema
-    migrations and seeds baseline data on startup.
+    migrations, and executes essential system initialization on startup.
+    Automatic demonstration data seeding is disabled for production delivery.
     """
     check_auth_config()
     run_migrations()
