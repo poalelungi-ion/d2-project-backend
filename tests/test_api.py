@@ -729,23 +729,41 @@ def test_preview_rejects_unrecognized_column_names():
     assert "Matrikelnr" in response.json()["detail"]
 
 
-def test_preview_rejects_unknown_header_even_when_client_maps_it():
-    """A mapping cannot alias an unknown title onto a field — names are closed."""
+def test_preview_supports_dynamic_client_mapping_and_ignores_extra_columns():
+    """A client mapping can dynamically map custom headers and ignore extra exam point columns."""
     paste = (
-        "Matrikelnr\tName\tProgram\tSemester\tEmail\n"
-        "12345\tSchneider, Lena\tSE Master\t3\t1.7\n"
+        "Matrikelnr\tName\tProgram\tSemester\t1a\t1b\tPoints\tFinalMark\tAttended\tNotes\n"
+        "12345\tSchneider, Lena\tSE Master\t3\t10\t15\t25\t1.7\tyes\tgood\n"
     )
     response = client.post(
         "/api/upload/preview/",
         data={
             "paste": paste,
             "semester": "WISE_25",
-            "mapping": '{"Email": "grade", "Matrikelnr": "student_id", "Name": "name"}',
+            "mapping": '{"FinalMark": "grade", "Matrikelnr": "student_id", "Name": "name", "1a": "ignore", "1b": "ignore"}',
             "nameSplitRule": "Last, First",
         },
     )
-    assert response.status_code == 400
-    assert "Email" in response.json()["detail"]
+    assert response.status_code == 200
+    rows = response.json()["preview_data"]
+    assert len(rows) == 1
+    assert rows[0]["student_id"] == "12345"
+    assert rows[0]["grade"] == "1.7"
+    assert rows[0]["is_valid"] is True
+
+
+def test_upload_headers_endpoint_extracts_headers_and_samples():
+    paste = (
+        "Matrikelnr\tName\tStudiengang\tFachsemester\t1a\t1b\tNote\n"
+        "1012345\tSchneider, Lena\tSE Master\t3\t12\t8\t1.3\n"
+    )
+    response = client.post("/api/upload/headers/", data={"paste": paste})
+    assert response.status_code == 200
+    body = response.json()
+    assert body["headers"] == ["Matrikelnr", "Name", "Studiengang", "Fachsemester", "1a", "1b", "Note"]
+    assert body["row_count"] == 1
+    assert body["samples"]["Matrikelnr"] == "e.g. 1012345"
+    assert body["samples"]["Note"] == "e.g. 1.3"
 
 
 def test_preview_ignores_ects_columns_in_the_file():
