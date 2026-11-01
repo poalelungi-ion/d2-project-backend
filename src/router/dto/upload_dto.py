@@ -28,7 +28,6 @@ class UploadConfirmRequest(BaseModel):
     # and the course is matched by name instead.
     courseId: Optional[int] = None
     courseName: str
-    ects: Optional[str] = "6"
     semester: str
     # Defaulted so callers predating the attempt-type dropdown still import.
     attemptType: AttemptType = "Other"

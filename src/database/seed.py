@@ -51,7 +51,7 @@ def seed_bootstrap_admin():
 
 
 def seed_db():
-    """Insert demonstration data, unless the students table is already populated."""
+    """Insert demonstration data for development/testing environments. Disabled by default in production delivery."""
     db = next(get_db())
     try:
         if db.query(Student).count() > 0:
