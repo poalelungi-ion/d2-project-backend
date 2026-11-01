@@ -76,7 +76,12 @@ PROGRAM_ALIASES = {
     "msc wiinf": "Wirtschaftsinformatik Master",
     "wiinf master": "Wirtschaftsinformatik Master",
     "wiinf": "Wirtschaftsinformatik Master",
+    "m.sc. winf": "Wirtschaftsinformatik Master",
+    "msc winf": "Wirtschaftsinformatik Master",
+    "winf master": "Wirtschaftsinformatik Master",
+    "winf": "Wirtschaftsinformatik Master",
     "wirtschaftsinformatik": "Wirtschaftsinformatik Master",
+    "wirtschaftsinformatik master": "Wirtschaftsinformatik Master",
 
     # Data Science
     "m.sc. data science": "Data Science Master",

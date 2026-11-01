@@ -374,18 +374,28 @@ async def preview_upload(
         preview_data = []
         for _, row in df.iterrows():
             record = {
-                "student_id": str(row.get("student_id", "")),
-                "first_name": str(row.get("first_name", "")),
-                "last_name": str(row.get("last_name", "")),
-                "name": str(row.get("name", "")),
-                "program": str(row.get("program", "")),
-                "semester": str(row.get("semester", semester or "")),
-                "grade": str(row.get("grade", "")),
+                "student_id": re.sub(r"\.0$", "", str(row.get("student_id", "")).strip()),
+                "first_name": str(row.get("first_name", "")).strip(),
+                "last_name": str(row.get("last_name", "")).strip(),
+                "name": str(row.get("name", "")).strip(),
+                "program": str(row.get("program", "")).strip(),
+                "semester": re.sub(r"\.0$", "", str(row.get("semester", semester or "")).strip()),
+                "grade": str(row.get("grade", "")).strip(),
             }
 
             for k in record:
                 if str(record[k]).lower() == "nan":
                     record[k] = ""
+
+            # Skip spreadsheet summary footer rows (e.g., Max:, Max Achieved:, Average:)
+            # that have no student identifier and no student name.
+            if (
+                not record["student_id"]
+                and not record["first_name"]
+                and not record["last_name"]
+                and not record["name"]
+            ):
+                continue
 
             # NE/EX/NA/TA/AT are not grades. Empty cells have no grade.
             # Skip rows where a student has no grade (#104085)
