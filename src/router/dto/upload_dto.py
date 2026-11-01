@@ -1,14 +1,13 @@
 """
 Upload and Ingestion Data Transfer Objects (DTOs).
 """
-from typing import List, Literal, Optional
-from pydantic import BaseModel
+from typing import List, Optional
+from pydantic import BaseModel, field_validator
 
 from src.lib.study_program import UNASSIGNED_PROGRAM, UploadStudyProgram
 
-# The sittings a lecturer can tag an upload with. Kept as a Literal so an
-# unrecognised value is rejected at the API boundary rather than reaching the DB.
-AttemptType = Literal["Exam 1", "Exam 2", "Other"]
+# Lecturers can tag an upload or grade sitting with any custom attempt description (#104109).
+AttemptType = str
 
 
 class ConfirmRecord(BaseModel):
@@ -29,6 +28,14 @@ class UploadConfirmRequest(BaseModel):
     courseId: Optional[int] = None
     courseName: str
     semester: str
-    # Defaulted so callers predating the attempt-type dropdown still import.
+    # Defaulted so callers predating the attempt-type field still import.
     attemptType: AttemptType = "Other"
     records: List[ConfirmRecord]
+
+    @field_validator("attemptType", mode="before")
+    @classmethod
+    def normalize_attempt_type(cls, value: object) -> str:
+        if value is None:
+            return "Other"
+        cleaned = str(value).strip()
+        return cleaned if cleaned else "Other"

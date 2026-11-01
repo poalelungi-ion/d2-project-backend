@@ -40,7 +40,8 @@ def update_grades_batch(db: Session, updates: List[GradeUpdate]):
             result.passed = verdict.passed
             result.absence_code = verdict.absence_code
             if u.attempt_type is not None:
-                result.attempt_type = u.attempt_type
+                cleaned_attempt = u.attempt_type.strip()
+                result.attempt_type = cleaned_attempt if cleaned_attempt else "Other"
             if u.semester and result.exam and result.exam.semester != u.semester:
                 target_exam = db.query(Exam).filter(
                     Exam.course_id == result.exam.course_id,
