@@ -105,7 +105,7 @@ def create_student(db: Session, student_dto: StudentCreate):
         student_id=student_dto.student_id,
         name=student_dto.name,
         program=student_dto.program,
-        status=student_dto.status,
+        status=student_dto.status or "active",
     )
     try:
         db.add(new_student)
@@ -136,7 +136,8 @@ def update_student(db: Session, student_id: int, update_dto: StudentUpdate):
 
     student.program = update_dto.program
     student.name = update_dto.name
-    student.status = update_dto.status
+    if update_dto.status is not None:
+        student.status = update_dto.status
 
     try:
         db.commit()

@@ -12,14 +12,14 @@ class StudentCreate(BaseModel):
     student_id: int
     name: str
     program: NamedStudyProgram = "SE Master"
-    status: str = "active"
+    status: Optional[str] = "active"
 
 
 class StudentUpdate(BaseModel):
     new_student_id: Optional[int] = None
     program: NamedStudyProgram
     name: str
-    status: str
+    status: Optional[str] = None
     version: int
 
 

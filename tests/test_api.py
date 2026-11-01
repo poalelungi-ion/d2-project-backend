@@ -1078,6 +1078,41 @@ def test_seed_on_startup_disabled_by_default():
     assert config.SEED_ON_STARTUP is False
 
 
+def test_student_creation_and_update_without_status_field_104082():
+    """Task #104082: API payloads no longer require student status during profile creation or updates."""
+    # 1. Create student without status field
+    create_payload = {
+        "student_id": 104082,
+        "name": "Status Deprecated",
+        "program": "SE Master",
+    }
+    create_res = client.post("/api/students/", json=create_payload)
+    assert create_res.status_code == 201
+    assert create_res.json()["student_id"] == 104082
+
+    # Verify default status is active
+    details = client.get("/api/students/104082").json()
+    assert details["name"] == "Status Deprecated"
+    assert details["status"] == "active"
+    version = details["version"]
+
+    # 2. Update student without status field
+    update_payload = {
+        "new_student_id": 104082,
+        "name": "Status Deprecated Updated",
+        "program": "Data Science Master",
+        "version": version,
+    }
+    update_res = client.put("/api/students/104082", json=update_payload)
+    assert update_res.status_code == 200
+
+    # Verify profile was updated and status remains intact
+    updated_details = client.get("/api/students/104082").json()
+    assert updated_details["name"] == "Status Deprecated Updated"
+    assert updated_details["program"] == "Data Science Master"
+    assert updated_details["status"] == "active"
+
+
 def test_seed_on_startup_disallowed_in_production_mode(monkeypatch):
     """#104080: Verify that when DEBUG is false (production mode), demo seeding cannot be enabled."""
     from src.database import config
