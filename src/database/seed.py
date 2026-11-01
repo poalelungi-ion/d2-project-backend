@@ -67,9 +67,9 @@ def seed_db():
             Student(student_id=1007, name="Sophie Wagner", program="SE Master"),
             Student(student_id=1008, name="Leon Becker", program="Data Science Master"),
             Student(student_id=1009, name="Marie Hoffmann", program="SE Master"),
-            Student(student_id=1010, name="Julia Alumni", program="SE Master", status="graduated"),
-            Student(student_id=1011, name="Tom Graduated", program="Data Science Master", status="graduated"),
-            Student(student_id=1012, name="Markus Failed", program="SE Master", status="failed"),
+            Student(student_id=1010, name="Julia Weber", program="SE Master"),
+            Student(student_id=1011, name="Tom Fischer", program="Data Science Master"),
+            Student(student_id=1012, name="Markus Meyer", program="SE Master"),
         ]
         db.add_all(students)
         db.commit()
