@@ -1221,6 +1221,54 @@ def test_confirm_excludes_rows_without_valid_numeric_grades_and_prevents_orphan_
         assert lookup.status_code == 404, f"Student {missing_sid} should not have been created in PostgreSQL"
 
 
+def test_update_student_study_program_persists_and_returns_record_104081():
+    """
+    Ticket #104081:
+    - Changing study_program in the Edit Student Profile modal sends the updated field in the PUT /api/students/{id} payload.
+    - The backend commits the change and returns the updated student record, immediately reflecting in the UI.
+    """
+    create_payload = {
+        "student_id": 104081,
+        "name": "Linus Torvalds",
+        "program": "SE Master",
+    }
+    create_res = client.post("/api/students/", json=create_payload)
+    assert create_res.status_code == 201
+    assert create_res.json()["student_id"] == 104081
+    assert create_res.json()["study_program"] == "SE Master"
+
+    # Fetch initial details
+    details = client.get("/api/students/104081").json()
+    assert details["program"] == "SE Master"
+    assert details["study_program"] == "SE Master"
+    initial_version = details["version"]
+
+    # 1. Update using study_program field
+    update_payload = {
+        "new_student_id": 104081,
+        "name": "Linus Benedict Torvalds",
+        "study_program": "Data Science Master",
+        "version": initial_version,
+    }
+    update_res = client.put("/api/students/104081", json=update_payload)
+    assert update_res.status_code == 200
+
+    # Backend must return the updated student record
+    updated_body = update_res.json()
+    assert updated_body["student_id"] == 104081
+    assert updated_body["name"] == "Linus Benedict Torvalds"
+    assert updated_body["study_program"] == "Data Science Master"
+    assert updated_body["program"] == "Data Science Master"
+    assert updated_body["version"] == initial_version + 1
+
+    # Verify persistent state via GET
+    fresh_details = client.get("/api/students/104081").json()
+    assert fresh_details["name"] == "Linus Benedict Torvalds"
+    assert fresh_details["study_program"] == "Data Science Master"
+    assert fresh_details["program"] == "Data Science Master"
+    assert fresh_details["version"] == initial_version + 1
+
+
 def test_seed_on_startup_disallowed_in_production_mode(monkeypatch):
     """#104080: Verify that when DEBUG is false (production mode), demo seeding cannot be enabled."""
     from src.database import config
