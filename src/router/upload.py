@@ -19,7 +19,6 @@ async def upload_file_preview(
     paste: Optional[str] = Form(None),
     course: Optional[str] = Form(None),
     courseName: Optional[str] = Form(None),
-    ects: Optional[str] = Form(None),
     semester: Optional[str] = Form(None),
     mapping: Optional[str] = Form(None),
     nameSplitRule: Optional[str] = Form(None),
@@ -27,7 +26,7 @@ async def upload_file_preview(
 ):
     """Parses file or pasted tabular data and validates fields before confirmation."""
     return await ingestion_service.preview_upload(
-        file, paste, course, courseName, ects, semester, mapping, nameSplitRule, db
+        file, paste, course, courseName, semester, mapping, nameSplitRule, db
     )
 
 
