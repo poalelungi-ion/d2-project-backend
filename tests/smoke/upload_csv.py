@@ -35,7 +35,6 @@ data = {
     'course': '101',
     'courseName': 'Test Course API',
     'semester': 'WiSe23/24',
-    'ects': '6',
     'mapping': json.dumps(mapping),
     'nameSplitRule': 'Last, First'
 }

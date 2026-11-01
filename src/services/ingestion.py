@@ -4,13 +4,13 @@ Handles file parsing (.xlsx, .xls, .csv, .tsv, .ods) and pasted spreadsheets,
 column mapping, name splitting, preview validation, and atomic batch confirmation.
 """
 import io
-import json
 from typing import Optional
 import pandas as pd
 from fastapi import HTTPException, Response, UploadFile, status
 from sqlalchemy.orm import Session
 
 from src.database.models import Course, Exam, ExamResult, Student
+from src.lib.column_names import HeaderConflict, UnrecognizedHeaders, standardize_columns
 from src.lib.study_program import UNASSIGNED_PROGRAM, is_known_program, normalize_study_program
 from src.router.dto import UploadConfirmRequest
 from src.services.grade_outcome import (
@@ -42,15 +42,34 @@ COURSE_COLUMN_NAMES = frozenset(
     }
 )
 
+# ECTS/credits are not tracked. Drop those headers so they cannot be mapped
+# onto a field or fail a later closed-name check.
+ECTS_COLUMN_NAMES = frozenset(
+    {
+        "ects",
+        "credit",
+        "credits",
+        "ectscredit",
+        "ectscredits",
+        "kreditpunkte",
+        "leistungspunkte",
+    }
+)
+
 
 def is_course_column(name: object) -> bool:
     """True for a header naming the course, in English or German, however punctuated."""
     return "".join(ch for ch in str(name).lower() if ch.isalnum()) in COURSE_COLUMN_NAMES
 
 
+def is_ects_column(name: object) -> bool:
+    """True for a header naming ECTS / credits, however punctuated."""
+    return "".join(ch for ch in str(name).lower() if ch.isalnum()) in ECTS_COLUMN_NAMES
+
+
 def _is_dropped_column(name: object) -> bool:
-    """Headers the parser never reads: pass/fail labels and course identifiers."""
-    return is_ignored_column(name) or is_course_column(name)
+    """Headers the parser never reads: pass/fail labels, course ids, and ECTS."""
+    return is_ignored_column(name) or is_course_column(name) or is_ects_column(name)
 
 
 def _paste_separator(header_line: str) -> Optional[str]:
@@ -115,7 +134,6 @@ async def preview_upload(
     paste: Optional[str],
     course: Optional[str],
     courseName: Optional[str],
-    ects: Optional[str],
     semester: Optional[str],
     mapping: Optional[str],
     nameSplitRule: Optional[str],
@@ -140,22 +158,24 @@ async def preview_upload(
                 detail="Provide a spreadsheet file or paste tabular data.",
             )
 
-        if mapping:
-            try:
-                column_mapping = {
-                    source: target
-                    for source, target in json.loads(mapping).items()
-                    if not _is_dropped_column(source) and not _is_dropped_column(target)
-                }
-                df = df.rename(columns=column_mapping)
-            except Exception as e:
-                print("Mapping parsing error:", e)
-
-        # Pass/fail labels are never a result and the course is already known —
-        # drop both even if they survived mapping under their original header.
+        # Pass/fail labels and course identifiers are noise. Drop them before
+        # the remaining headers are checked against the closed name list.
+        # ECTS/credits are also not tracked and are removed before validation.
         drop = [col for col in df.columns if _is_dropped_column(col)]
         if drop:
             df = df.drop(columns=drop)
+
+        try:
+            df = df.rename(columns=standardize_columns(df.columns))
+        except (UnrecognizedHeaders, HeaderConflict) as exc:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail=str(exc),
+            ) from exc
+
+        # Client-supplied mapping is ignored: standard names are enforced here
+        # so a typo cannot be aliased onto the wrong field.
+        _ = mapping
 
         if nameSplitRule and "name" in df.columns:
             if nameSplitRule == "Last, First":
@@ -369,4 +389,3 @@ def convert_paste_to_excel(paste_text: str, filename: Optional[str] = "pasted_ta
         media_type="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
         headers={"Content-Disposition": f'attachment; filename="{safe_name}"'},
     )
-
