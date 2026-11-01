@@ -1317,3 +1317,33 @@ def test_essential_initialization_retains_bootstrap_admin(monkeypatch):
         assert db.query(Student).count() == 0
     finally:
         db.close()
+
+
+def test_study_program_normalization_and_mapping_on_confirm_104102():
+    """
+    User Story #104102:
+    - Raw imported study program abbreviations/aliases are normalized to canonical study programs
+      during both preview and batch confirmation.
+    """
+    payload = {
+        "course": "MAP104102",
+        "courseName": "Study Program Normalization Course",
+        "semester": "WISE_25",
+        "attemptType": "Exam 1",
+        "records": [
+            {
+                "student_id": "104102",
+                "first_name": "Barbara",
+                "last_name": "Liskov",
+                "program": "M.Sc. SE",
+                "semester": "WISE_25",
+                "grade": "1.0",
+            }
+        ],
+    }
+    res = client.post("/api/upload/confirm/", json=payload)
+    assert res.status_code == 200
+
+    details = client.get("/api/students/104102").json()
+    assert details["program"] == "SE Master"
+    assert details["study_program"] == "SE Master"

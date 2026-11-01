@@ -84,7 +84,13 @@ PROGRAM_ALIASES = {
     "data science": "Data Science Master",
     "data analytics": "Data Science Master",
     "m.sc. data analytics": "Data Science Master",
+    "m.sc. ds": "Data Science Master",
+    "msc ds": "Data Science Master",
+    "ds master": "Data Science Master",
+    "ds": "Data Science Master",
 }
+
+_CANONICAL_LOWER = {p.lower(): p for p in _UPLOAD}
 
 
 def normalize_study_program(value: str) -> str:
@@ -97,6 +103,8 @@ def normalize_study_program(value: str) -> str:
     if clean in _UPLOAD:
         return clean
     lower = clean.lower()
+    if lower in _CANONICAL_LOWER:
+        return _CANONICAL_LOWER[lower]
     if lower in PROGRAM_ALIASES:
         return PROGRAM_ALIASES[lower]
     return clean
@@ -127,9 +135,10 @@ def _upload_program(value: object) -> str:
     name = str(value).strip() if value is not None else ""
     if not name:
         return UNASSIGNED_PROGRAM
-    if not is_known_program(name):
+    normalized = normalize_study_program(name)
+    if normalized not in _UPLOAD:
         raise ValueError("Study program must be chosen from the predefined list")
-    return name
+    return normalized
 
 
 NamedStudyProgram = Annotated[StudyProgram, BeforeValidator(_named_program)]
