@@ -55,6 +55,22 @@ def is_filtered_status_code(raw: object) -> bool:
     return _normalize_code(text) in FILTERED_STATUS_CODES
 
 
+def is_valid_numeric_grade(raw: object) -> bool:
+    """True iff raw can be evaluated to a valid numeric German grade between 1.0 and 5.0 (#104085)."""
+    if raw is None:
+        return False
+    text = str(raw).strip()
+    if not text or text.lower() == "nan" or text.lower() == "none":
+        return False
+    if is_filtered_status_code(text):
+        return False
+    try:
+        val = float(text.replace(",", "."))
+    except (ValueError, TypeError):
+        return False
+    return 1.0 <= val <= 5.0
+
+
 def evaluate_grade(raw: object) -> GradeVerdict:
     """
     Interpret one grade cell.

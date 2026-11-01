@@ -3,7 +3,7 @@ Student and Grading Data Transfer Objects (DTOs).
 Validates inputs for student creation, profile editing, status updates, and grade recording.
 """
 from typing import Optional, Union
-from pydantic import BaseModel, Field
+from pydantic import BaseModel
 
 from src.lib.study_program import NamedStudyProgram
 
