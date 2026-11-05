@@ -379,16 +379,17 @@ def test_upload_confirm_defaults_attempt_type():
         db.close()
 
 
-def test_upload_confirm_rejects_unknown_attempt_type():
+def test_upload_confirm_accepts_custom_attempt_type():
+    """#104109: Backend schemas and database columns accept and store custom string values for attempt_type."""
     payload = {
         "course": "ATT103",
-        "courseName": "Bad Attempt Course",
+        "courseName": "Custom Attempt Course",
         "semester": "WISE_25",
         "attemptType": "Exam 7",
         "records": [
             {
                 "student_id": "6004",
-                "first_name": "Bad",
+                "first_name": "Custom",
                 "last_name": "Attempt",
                 "program": "SE Master",
                 "semester": "WISE_25",
@@ -396,7 +397,13 @@ def test_upload_confirm_rejects_unknown_attempt_type():
             }
         ],
     }
-    assert client.post("/api/upload/confirm/", json=payload).status_code == 422
+    assert client.post("/api/upload/confirm/", json=payload).status_code == 200
+    db = TestingSessionLocal()
+    try:
+        result = db.query(models.ExamResult).filter_by(student_id=6004).one()
+        assert result.attempt_type == "Exam 7"
+    finally:
+        db.close()
 
 
 def test_transcript_exposes_attempt_type():
@@ -1363,6 +1370,65 @@ def test_study_program_normalization_and_mapping_on_confirm_104102():
     details = client.get("/api/students/104102").json()
     assert details["program"] == "SE Master"
     assert details["study_program"] == "SE Master"
+
+
+def test_free_form_exam_attempt_type_104109():
+    """
+    User Story #104109:
+    - Backend schemas and database columns accept and store custom free-form string values for attempt_type.
+    - Updating a grade via PUT /api/grades/ (Edit Grade -> Exam Attempt) persists custom attempt descriptions.
+    """
+    # 1. Create course and student
+    client.post(
+        "/api/courses/",
+        json={"course_id": 104109, "course_name": "Distributed Systems", "semester": "WISE_25"},
+    )
+    client.post(
+        "/api/students/",
+        json={"student_id": 104109, "name": "Leslie Lamport", "program": "SE Master"},
+    )
+
+    # 2. Add grade with custom free-form sitting description
+    add_res = client.post(
+        "/api/students/104109/grades",
+        json={
+            "course_id": 104109,
+            "semester": "WISE_25",
+            "grade": 2.0,
+            "attempt_type": "1st Written Sitting",
+        },
+    )
+    assert add_res.status_code == 200
+
+    details = client.get("/api/students/104109").json()
+    assert len(details["transcript"]) == 1
+    entry = details["transcript"][0]
+    assert entry["attempt_type"] == "1st Written Sitting"
+
+    # 3. Edit grade via POST /api/grades/ with a new free-form attempt description
+    update_res = client.post(
+        "/api/grades/",
+        json=[
+            {
+                "result_id": entry["result_id"],
+                "version": entry["version"],
+                "grade": 1.3,
+                "attempt_type": "Oral Colloquium Retake",
+                "semester": "WISE_25",
+            }
+        ],
+    )
+    assert update_res.status_code == 200
+
+    updated_details = client.get("/api/students/104109").json()
+    updated_entry = updated_details["transcript"][0]
+    assert updated_entry["grade"] == 1.3
+    assert updated_entry["attempt_type"] == "Oral Colloquium Retake"
+
+    courses = client.get("/api/courses/").json()
+    course = next(c for c in courses if c["course_id"] == 104109)
+    mark = next(m for m in course["marks"] if m["student_id"] == 104109)
+    assert mark["attempt_type"] == "Oral Colloquium Retake"
 
 
 def test_remove_graduate_and_fail_student_lifecycle_actions_104083():
