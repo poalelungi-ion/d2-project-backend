@@ -12,14 +12,12 @@ from src.services.student import (
     create_student,
     get_all_students,
     update_student,
-    update_student_status,
 )
 
 __all__ = [
     "get_all_students",
     "create_student",
     "update_student",
-    "update_student_status",
     "add_student_grade",
     "get_all_courses",
     "create_course",

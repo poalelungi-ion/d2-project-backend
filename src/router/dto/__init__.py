@@ -1,7 +1,6 @@
 from src.router.dto.create_student import (
     StudentCreate,
     StudentUpdate,
-    StudentStatusUpdate,
     AddGradeRequest,
 )
 from src.router.dto.course_dto import (
@@ -21,7 +20,6 @@ from src.router.dto.auth_dto import (
 __all__ = [
     "StudentCreate",
     "StudentUpdate",
-    "StudentStatusUpdate",
     "AddGradeRequest",
     "CourseCreate",
     "CourseUpdate",

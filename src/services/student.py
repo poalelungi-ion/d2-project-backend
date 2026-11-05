@@ -10,7 +10,6 @@ from src.database.models import Course, Exam, ExamResult, Student
 from src.router.dto import (
     AddGradeRequest,
     StudentCreate,
-    StudentStatusUpdate,
     StudentUpdate,
 )
 from src.services.grade_outcome import (
@@ -108,7 +107,7 @@ def create_student(db: Session, student_dto: StudentCreate):
         student_id=student_dto.student_id,
         name=student_dto.name,
         program=resolved_program,
-        status=student_dto.status or "active",
+        status="active",
     )
     try:
         db.add(new_student)
@@ -149,8 +148,6 @@ def update_student(db: Session, student_id: int, update_dto: StudentUpdate):
         student.program = resolved_program
     if update_dto.name is not None:
         student.name = update_dto.name
-    if update_dto.status is not None:
-        student.status = update_dto.status
 
     try:
         db.commit()
@@ -166,23 +163,6 @@ def update_student(db: Session, student_id: int, update_dto: StudentUpdate):
     except StaleDataError:
         db.rollback()
         raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail="Data modified by another user. Please refresh.")
-    except Exception:
-        db.rollback()
-        raise
-
-
-def update_student_status(db: Session, student_id: int, update_dto: StudentStatusUpdate):
-    """
-    Updates a student's active/graduated/failed status.
-    """
-    student = db.query(Student).filter(Student.student_id == student_id).first()
-    if not student:
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Student not found")
-
-    student.status = update_dto.status
-    try:
-        db.commit()
-        return {"status": "success"}
     except Exception:
         db.rollback()
         raise
