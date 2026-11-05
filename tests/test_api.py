@@ -1031,7 +1031,6 @@ def test_student_profile_update_and_optimistic_locking_97930():
         "new_student_id": 97931,
         "name": "Ada King Lovelace",
         "program": "Data Science Master",
-        "status": "graduated",
         "version": version,
     }
     update_res = client.put("/api/students/97931", json=update_payload)
@@ -1041,7 +1040,6 @@ def test_student_profile_update_and_optimistic_locking_97930():
     updated_details = client.get("/api/students/97931").json()
     assert updated_details["name"] == "Ada King Lovelace"
     assert updated_details["program"] == "Data Science Master"
-    assert updated_details["status"] == "graduated"
 
     # 2. Conflict on stale version (concurrency)
     stale_res = client.put("/api/students/97931", json=update_payload)
@@ -1365,3 +1363,72 @@ def test_study_program_normalization_and_mapping_on_confirm_104102():
     details = client.get("/api/students/104102").json()
     assert details["program"] == "SE Master"
     assert details["study_program"] == "SE Master"
+
+
+def test_remove_graduate_and_fail_student_lifecycle_actions_104083():
+    """
+    Task #104083:
+    - Global 'Graduate' and 'Fail' student lifecycle classification actions (/api/students/{id}/status) are removed.
+    - Student records cannot be transitioned to 'graduated' or 'failed' states via profile create/update endpoints.
+    - Student records are tracked purely through their course-level exam marks.
+    """
+    # 1. Create student and course
+    create_res = client.post(
+        "/api/students/",
+        json={
+            "student_id": 104083,
+            "name": "Grace Hopper",
+            "program": "SE Master",
+            "status": "graduated",
+        },
+    )
+    assert create_res.status_code == 201
+
+    # 2. The legacy PUT /api/students/{id}/status endpoint must no longer exist
+    status_res = client.put(
+        "/api/students/104083/status",
+        json={"status": "graduated", "version": 1},
+    )
+    assert status_res.status_code in (404, 405)
+
+    fail_status_res = client.put(
+        "/api/students/104083/status",
+        json={"status": "failed", "version": 1},
+    )
+    assert fail_status_res.status_code in (404, 405)
+
+    # 3. Updating profile with 'status': 'failed' does not mutate student into 'failed' lifecycle state
+    details = client.get("/api/students/104083").json()
+    assert details["status"] == "active"
+    update_res = client.put(
+        "/api/students/104083",
+        json={
+            "new_student_id": 104083,
+            "name": "Grace Brewster Hopper",
+            "program": "SE Master",
+            "status": "failed",
+            "version": details["version"],
+        },
+    )
+    assert update_res.status_code == 200
+    updated_details = client.get("/api/students/104083").json()
+    assert updated_details["status"] == "active"
+
+    # 4. Student records are tracked purely through their course-level exam marks
+    course_res = client.post(
+        "/api/courses/",
+        json={"course_id": 104083, "course_name": "Compiler Construction", "semester": "WISE_25"},
+    )
+    assert course_res.status_code == 201
+
+    grade_res = client.post(
+        "/api/students/104083/grades",
+        json={"course_id": 104083, "semester": "WISE_25", "grade": 1.3, "attempt_type": "Exam 1"},
+    )
+    assert grade_res.status_code == 200
+
+    roster = client.get("/api/students/").json()
+    student_row = next(s for s in roster if s["student_id"] == 104083)
+    assert student_row["total_exams"] == 1
+    assert student_row["passed_exams"] == 1
+    assert student_row["avg_grade"] == 1.3

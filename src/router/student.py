@@ -9,7 +9,6 @@ from src.database.connection import get_db
 from src.router.dto import (
     AddGradeRequest,
     StudentCreate,
-    StudentStatusUpdate,
     StudentUpdate,
 )
 from src.services import student as student_service
@@ -46,12 +45,6 @@ def create_student(student: StudentCreate, db: Session = Depends(get_db)):
 def update_student(student_id: int, update: StudentUpdate, db: Session = Depends(get_db)):
     """Updates an existing student profile under optimistic concurrency control (requires a signed-in user)."""
     return student_service.update_student(db, student_id, update)
-
-
-@router.put("/api/students/{student_id}/status", summary="Update student status")
-def update_student_status(student_id: int, update: StudentStatusUpdate, db: Session = Depends(get_db)):
-    """Updates a student's active/graduated/failed status."""
-    return student_service.update_student_status(db, student_id, update)
 
 
 @router.post("/api/students/{student_id}/grades", summary="Add or update student grade")
