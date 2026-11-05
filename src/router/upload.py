@@ -13,6 +13,15 @@ from src.services import ingestion as ingestion_service
 router = APIRouter()
 
 
+@router.post("/api/upload/headers/", summary="Inspect column headers and sample values from uploaded file or paste")
+async def upload_file_headers(
+    file: Optional[UploadFile] = File(None),
+    paste: Optional[str] = Form(None),
+):
+    """Extracts spreadsheet column headers, row count, and sample values for dynamic column mapping."""
+    return await ingestion_service.extract_upload_headers(file, paste)
+
+
 @router.post("/api/upload/preview/", summary="Preview uploaded or pasted exam data")
 async def upload_file_preview(
     file: Optional[UploadFile] = File(None),
