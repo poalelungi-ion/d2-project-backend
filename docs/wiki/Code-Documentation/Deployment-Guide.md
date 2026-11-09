@@ -1,4 +1,4 @@
-# Deployment & Enterprise Configuration Guide
+﻿# Deployment & Enterprise Configuration Guide
 
 Complete operational guide for deploying the Study Progress Analysis system locally or in production environments.
 
@@ -10,8 +10,8 @@ The repository provides a root `docker-compose.yml` orchestrating PostgreSQL, th
 
 ```bash
 # 1. Clone both repositories into the root workspace
-git clone https://gitlab.gwdg.de/sudarshan.bashyal/d2-project-client.git
-git clone https://gitlab.gwdg.de/sudarshan.bashyal/d2-project-backend.git
+git clone https://github.com/poalelungi-ion/d2-project-client.git
+git clone https://github.com/poalelungi-ion/d2-project-backend.git
 
 # 2. Copy the environment configuration
 cp .env.example .env
@@ -61,8 +61,8 @@ Pre-built Docker images are published to the GWDG GitLab Container Registry:
 docker login registry.gitlab.gwdg.de
 
 # 2. Pull the latest images
-docker pull registry.gitlab.gwdg.de/sudarshan.bashyal/d2-project-backend:latest
-docker pull registry.gitlab.gwdg.de/sudarshan.bashyal/d2-project-client:latest
+docker pull registry.gitlab.gwdg.de/poalelungi-ion/d2-project-backend:latest
+docker pull registry.gitlab.gwdg.de/poalelungi-ion/d2-project-client:latest
 
 # 3. Launch isolated containers
 docker run -d --name spa_db \
@@ -78,12 +78,12 @@ docker run -d --name spa_backend \
   -e JWT_SECRET=production-secret-key-change-me \
   -e CORS_ORIGINS="http://<server-ip>:5173" \
   -p 8000:8000 \
-  registry.gitlab.gwdg.de/sudarshan.bashyal/d2-project-backend:latest
+  registry.gitlab.gwdg.de/poalelungi-ion/d2-project-backend:latest
 
 docker run -d --name spa_client \
   -e VITE_API_BASE_URL="http://<server-ip>:8000/api" \
   -p 5173:5173 \
-  registry.gitlab.gwdg.de/sudarshan.bashyal/d2-project-client:latest
+  registry.gitlab.gwdg.de/poalelungi-ion/d2-project-client:latest
 ```
 
 ---

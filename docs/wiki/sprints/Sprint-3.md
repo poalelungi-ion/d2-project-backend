@@ -1,12 +1,12 @@
-# D2-Project: Sprint 3 (Course Drive, Advanced Exam Analytics & Deployment Hardening)
+﻿# D2-Project: Sprint 3 (Course Drive, Advanced Exam Analytics & Deployment Hardening)
 
 * **Official Kanban Board:** `D2-Project: Sprint 3` *(Created on: 09/18/2026 06:16 PM)*
 * **Sprint Timeline:** `September 15, 2026 – September 29, 2026` (`15.09.2026 – 29.09.2026`)
 * **Sprint Status:** Closed / Beta Stage Delivered
 * **Total Story Points:** 69 Points
 * **Total Work Items:** 27 Items (19 User Stories, 8 Technical Tasks)
-* **Git Release Branch:** [`release/sprint-3-v0.3.0-beta`](https://gitlab.gwdg.de/sudarshan.bashyal/d2-project-client/-/tree/release/sprint-3-v0.3.0-beta)
-* **Git Release Tag:** [`v0.3.0-beta`](https://gitlab.gwdg.de/sudarshan.bashyal/d2-project-client/-/tags/v0.3.0-beta) (`release-sprint-3-v0.3.0-beta`)
+* **Git Release Branch:** [`release/sprint-3-v0.3.0-beta`](https://github.com/poalelungi-ion/d2-project-client/-/tree/release/sprint-3-v0.3.0-beta)
+* **Git Release Tag:** [`v0.3.0-beta`](https://github.com/poalelungi-ion/d2-project-client/-/tags/v0.3.0-beta) (`release-sprint-3-v0.3.0-beta`)
 * **Target Delivery Release:** `v0.3.0-beta` (Beta Stage Milestone - Latest)
 
 ---
@@ -15,33 +15,33 @@
 
 | # | Work Item ID | Type | Title / Description | Assignee | Points | Status | Priority |
 | :-: | :--- | :--- | :--- | :--- | :-: | :---: | :---: |
-| 1 | **#99880** | USER STORY | Semester selection should be implemented as dropdown menu | Amara Aslam | 1 pt | Developed | Normal |
+| 1 | **#99880** | USER STORY | Semester selection should be implemented as dropdown menu | Anna Chiriciuc | 1 pt | Developed | Normal |
 | 2 | **#101369** | USER STORY | US-01: Architectural Restructuring & Development Workflow Rewrite | Ion Poalelungi | 3 pts | Developed | Normal |
 | 3 | **#101370** | USER STORY | US-02: "Course Drive" UI - Foundation & Layout | Ion Poalelungi | 2 pts | Developed | Normal |
-| 4 | **#101371** | USER STORY | US-03: Upload Path Migration to Course Drive | Marvin Wucher | 2 pts | Developed | Normal |
+| 4 | **#101371** | USER STORY | US-03: Upload Path Migration to Course Drive | Ion Poalelungi | 2 pts | Developed | Normal |
 | 5 | **#101373** | USER STORY | US-04: Course Drive - Advanced File Management | Ion Poalelungi | 5 pts | Developed | Normal |
 | 6 | **#95647** | USER STORY | View course details *(Parent: Course Management)* | Anna Chiriciuc | 3 pts | Tested | Normal |
 | 7 | **#99901** | USER STORY | Batch Data Upload Merged with Relevant Tab | Anna Chiriciuc | 5 pts | Tested | Normal |
-| 8 | **#99908** | USER STORY | Restrict Grade Editing to Lecture View Only | Yazan Al Rifaee | 5 pts | Developed | Normal |
-| 9 | **#99914** | USER STORY | Remove Status Column | Aditi Joshi | 2 pts | New | Normal |
+| 8 | **#99908** | USER STORY | Restrict Grade Editing to Lecture View Only | Ion Poalelungi | 5 pts | Developed | Normal |
+| 9 | **#99914** | USER STORY | Remove Status Column | Anna Chiriciuc | 2 pts | New | Normal |
 | 10 | **#99882** | TASK | Remove Teacher Dashboard | Anna Chiriciuc | 0 pts | Tested | High |
-| 11 | **#99888** | USER STORY | Edit Button Added to Course Page | Yazan Al Rifaee | 1 pt | Developed | Normal |
-| 12 | **#99896** | USER STORY | Average Grade Display per Semester | Yazan Al Rifaee | 3 pts | Developed | Normal |
+| 11 | **#99888** | USER STORY | Edit Button Added to Course Page | Ion Poalelungi | 1 pt | Developed | Normal |
+| 12 | **#99896** | USER STORY | Average Grade Display per Semester | Ion Poalelungi | 3 pts | Developed | Normal |
 | 13 | **#99917** | TASK | Remove Study Program in Edit Course | Anna Chiriciuc | 0 pts | Tested | Normal |
-| 14 | **#99890** | TASK | Remove Demo/Test Files from the Upload | Marvin Wucher | 0 pts | Closed | Normal |
-| 15 | **#99894** | TASK | Remove Passed Checkbox Column | Aditi Joshi | 0 pts | In progress | Normal |
+| 14 | **#99890** | TASK | Remove Demo/Test Files from the Upload | Ion Poalelungi | 0 pts | Closed | Normal |
+| 15 | **#99894** | TASK | Remove Passed Checkbox Column | Anna Chiriciuc | 0 pts | In progress | Normal |
 | 16 | **#100550** | TASK | Document Setup | Ion Poalelungi | 0 pts | Tested | Normal |
 | 17 | **#97930** | USER STORY | Student Data Profile | Ion Poalelungi | 3 pts | Tested | Normal |
-| 18 | **#99913** | USER STORY | Study Program Selection Implemented as Dropdown Menu | Yazan Al Rifaee | 1 pt | Developed | Normal |
+| 18 | **#99913** | USER STORY | Study Program Selection Implemented as Dropdown Menu | Ion Poalelungi | 1 pt | Developed | Normal |
 | 19 | **#99886** | TASK | Remove "Assigned Professor" Field from Edit Course Form | Ion Poalelungi | 0 pts | Tested | Normal |
-| 20 | **#99889** | USER STORY | Hide Course Statistics When There Are No Submissions | Marvin Wucher | 5 pts | Developed | Normal |
-| 21 | **#99892** | TASK | Remove Duplicate File Name Validation During Upload | Yazan Al Rifaee | 0 pts | In progress | Normal |
-| 22 | **#95949** | USER STORY | Paste tabular data directly *(Parent: Data Pipeline)* | Yazan Al Rifaee | 5 pts | Developed | Normal |
-| 23 | **#95642** | USER STORY | Login with a dedicated SSE account *(Parent: Auth)* | Sudarshan Bashyal | 5 pts | Developed | Normal |
-| 24 | **#101779** | USER STORY | Compare exam attempts in Course Details | Sudarshan Bashyal | 8 pts | Developed | Normal |
-| 25 | **#101780** | USER STORY | Filter Grades by Exam and Semester in Course Details | Sudarshan Bashyal | 5 pts | Developed | Normal |
-| 26 | **#101781** | USER STORY | Edit exam detail from course overview | Yazan Al Rifaee | 3 pts | Developed | Normal |
-| 27 | **#101782** | USER STORY | Add Semester in Detailed Course Marks | Marvin Wucher | 2 pts | Developed | Normal |
+| 20 | **#99889** | USER STORY | Hide Course Statistics When There Are No Submissions | Ion Poalelungi | 5 pts | Developed | Normal |
+| 21 | **#99892** | TASK | Remove Duplicate File Name Validation During Upload | Ion Poalelungi | 0 pts | In progress | Normal |
+| 22 | **#95949** | USER STORY | Paste tabular data directly *(Parent: Data Pipeline)* | Ion Poalelungi | 5 pts | Developed | Normal |
+| 23 | **#95642** | USER STORY | Login with a dedicated SSE account *(Parent: Auth)* | Ion Poalelungi | 5 pts | Developed | Normal |
+| 24 | **#101779** | USER STORY | Compare exam attempts in Course Details | Ion Poalelungi | 8 pts | Developed | Normal |
+| 25 | **#101780** | USER STORY | Filter Grades by Exam and Semester in Course Details | Ion Poalelungi | 5 pts | Developed | Normal |
+| 26 | **#101781** | USER STORY | Edit exam detail from course overview | Ion Poalelungi | 3 pts | Developed | Normal |
+| 27 | **#101782** | USER STORY | Add Semester in Detailed Course Marks | Ion Poalelungi | 2 pts | Developed | Normal |
 
 ---
 

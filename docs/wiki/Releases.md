@@ -1,4 +1,4 @@
-# Release Management & Delimited Releases Log
+﻿# Release Management & Delimited Releases Log
 
 The Study Progress Analysis (SPA) project follows [Semantic Versioning 2.0.0](https://semver.org/) (`0.MAJOR.MINOR-PRERELEASE`).
 The project is currently in the **Beta Development Stage**, transitioning from early **Alpha** milestones. Each major iteration milestone is delimited by its corresponding sprint boundary and published as a tagged release in Git.
@@ -18,8 +18,8 @@ flowchart LR
 * **Stage:** **Beta Release (Latest)**
 * **Sprint Cycle:** **Sprint 4**
 * **Velocity Delivered:** 58 Story Points (23 Work Items)
-* **GitLab Release Branch:** [`release/sprint-4-v0.4.0-beta`](https://gitlab.gwdg.de/sudarshan.bashyal/d2-project-client/-/tree/release/sprint-4-v0.4.0-beta)
-* **GitLab Tag:** [`v0.4.0-beta`](https://gitlab.gwdg.de/sudarshan.bashyal/d2-project-client/-/tags/v0.4.0-beta) (`release-sprint-4-v0.4.0-beta`)
+* **GitLab Release Branch:** [`release/sprint-4-v0.4.0-beta`](https://github.com/poalelungi-ion/d2-project-client/-/tree/release/sprint-4-v0.4.0-beta)
+* **GitLab Tag:** [`v0.4.0-beta`](https://github.com/poalelungi-ion/d2-project-client/-/tags/v0.4.0-beta) (`release-sprint-4-v0.4.0-beta`)
 
 ### Key Features Delivered
 1. **Production Data Ingestion & Spreadsheet Normalization:**
@@ -55,8 +55,8 @@ flowchart LR
 * **Stage:** **Beta Release 1**
 * **Sprint Cycle:** **Sprint 3**
 * **Velocity Delivered:** 69 Story Points (27 Work Items)
-* **GitLab Release Branch:** [`release/sprint-3-v0.3.0-beta`](https://gitlab.gwdg.de/sudarshan.bashyal/d2-project-client/-/tree/release/sprint-3-v0.3.0-beta)
-* **GitLab Tag:** [`v0.3.0-beta`](https://gitlab.gwdg.de/sudarshan.bashyal/d2-project-client/-/tags/v0.3.0-beta) (`release-sprint-3-v0.3.0-beta`)
+* **GitLab Release Branch:** [`release/sprint-3-v0.3.0-beta`](https://github.com/poalelungi-ion/d2-project-client/-/tree/release/sprint-3-v0.3.0-beta)
+* **GitLab Tag:** [`v0.3.0-beta`](https://github.com/poalelungi-ion/d2-project-client/-/tags/v0.3.0-beta) (`release-sprint-3-v0.3.0-beta`)
 
 ### Key Features Delivered
 1. **Course Drive & Document Hub:**
@@ -83,8 +83,8 @@ flowchart LR
 * **Release Date:** September 14, 2026 (`01.09.2026 – 14.09.2026`)
 * **Stage:** **Alpha Release 2**
 * **Sprint Cycle:** **Sprint 2** (9 Work Items)
-* **GitLab Release Branch:** [`release/sprint-2-v0.2.0-alpha`](https://gitlab.gwdg.de/sudarshan.bashyal/d2-project-client/-/tree/release/sprint-2-v0.2.0-alpha)
-* **GitLab Tag:** [`v0.2.0-alpha`](https://gitlab.gwdg.de/sudarshan.bashyal/d2-project-client/-/tags/v0.2.0-alpha) (`release-sprint-2-v0.2.0-alpha`)
+* **GitLab Release Branch:** [`release/sprint-2-v0.2.0-alpha`](https://github.com/poalelungi-ion/d2-project-client/-/tree/release/sprint-2-v0.2.0-alpha)
+* **GitLab Tag:** [`v0.2.0-alpha`](https://github.com/poalelungi-ion/d2-project-client/-/tags/v0.2.0-alpha) (`release-sprint-2-v0.2.0-alpha`)
 
 ### Key Features Delivered
 1. **Grade-Driven Pass/Fail Calculation & Absence Parsing (`#96054`):**
@@ -106,8 +106,8 @@ flowchart LR
 * **Release Date:** August 31, 2026 (`18.08.2026 – 31.08.2026`)
 * **Stage:** **Alpha Release 1**
 * **Sprint Cycle:** **Sprint 1**
-* **GitLab Release Branch:** [`release/sprint-1-v0.1.0-alpha`](https://gitlab.gwdg.de/sudarshan.bashyal/d2-project-client/-/tree/release/sprint-1-v0.1.0-alpha)
-* **GitLab Tag:** [`v0.1.0-alpha`](https://gitlab.gwdg.de/sudarshan.bashyal/d2-project-client/-/tags/v0.1.0-alpha) (`release-sprint-1-v0.1.0-alpha`)
+* **GitLab Release Branch:** [`release/sprint-1-v0.1.0-alpha`](https://github.com/poalelungi-ion/d2-project-client/-/tree/release/sprint-1-v0.1.0-alpha)
+* **GitLab Tag:** [`v0.1.0-alpha`](https://github.com/poalelungi-ion/d2-project-client/-/tags/v0.1.0-alpha) (`release-sprint-1-v0.1.0-alpha`)
 
 ### Key Features Delivered
 1. **Multi-Format Spreadsheet Ingestion Foundations:**
@@ -125,8 +125,8 @@ flowchart LR
 * **Release Date:** August 17, 2026 (`04.08.2026 – 17.08.2026`)
 * **Stage:** **Alpha Inception**
 * **Sprint Cycle:** **Sprint 0: Ignition**
-* **GitLab Release Branch:** [`release/sprint-0-ignition`](https://gitlab.gwdg.de/sudarshan.bashyal/d2-project-client/-/tree/release/sprint-0-ignition)
-* **GitLab Tag:** [`release-ignition-sprint-0`](https://gitlab.gwdg.de/sudarshan.bashyal/d2-project-client/-/tags/release-ignition-sprint-0)
+* **GitLab Release Branch:** [`release/sprint-0-ignition`](https://github.com/poalelungi-ion/d2-project-client/-/tree/release/sprint-0-ignition)
+* **GitLab Tag:** [`release-ignition-sprint-0`](https://github.com/poalelungi-ion/d2-project-client/-/tags/release-ignition-sprint-0)
 
 ### Key Features Delivered
 1. **Repository Topology & Stack Selection:**

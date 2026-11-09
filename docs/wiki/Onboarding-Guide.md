@@ -1,4 +1,4 @@
-# Developer Onboarding & Project Handover Guide
+﻿# Developer Onboarding & Project Handover Guide
 
 Welcome to the **Study Progress Analysis (SPA)** system team! This guide provides everything a new developer, maintainer, or evaluator needs to understand, run, develop, and hand off the application with confidence.
 
@@ -34,8 +34,8 @@ Before getting started, ensure the following are installed:
 1. **Clone the repositories into a shared parent folder:**
    ```bash
    mkdir spa-project && cd spa-project
-   git clone https://gitlab.gwdg.de/sudarshan.bashyal/d2-project-client.git
-   git clone https://gitlab.gwdg.de/sudarshan.bashyal/d2-project-backend.git
+   git clone https://github.com/poalelungi-ion/d2-project-client.git
+   git clone https://github.com/poalelungi-ion/d2-project-backend.git
    ```
 
 2. **Set up the central environment file:**

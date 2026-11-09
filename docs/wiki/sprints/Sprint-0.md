@@ -1,10 +1,10 @@
-# D2-Project: Ignition (Sprint 0: Setup & Architectural Blueprint)
+﻿# D2-Project: Ignition (Sprint 0: Setup & Architectural Blueprint)
 
 * **Official Kanban Board:** `D2-Project: Ignition` *(Created on: 08/03/2026 07:18 PM)*
 * **Sprint Timeline:** `August 04, 2026 – August 17, 2026`
 * **Sprint Status:** Completed
-* **Git Release Branch:** [`release/sprint-0-ignition`](https://gitlab.gwdg.de/sudarshan.bashyal/d2-project-client/-/tree/release/sprint-0-ignition)
-* **Git Release Tag:** [`release-ignition-sprint-0`](https://gitlab.gwdg.de/sudarshan.bashyal/d2-project-client/-/tags/release-ignition-sprint-0)
+* **Git Release Branch:** [`release/sprint-0-ignition`](https://github.com/poalelungi-ion/d2-project-client/-/tree/release/sprint-0-ignition)
+* **Git Release Tag:** [`release-ignition-sprint-0`](https://github.com/poalelungi-ion/d2-project-client/-/tags/release-ignition-sprint-0)
 * **Target Delivery Release:** `v0.0.1-alpha` (Project Inception)
 
 ---

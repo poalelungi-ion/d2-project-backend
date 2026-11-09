@@ -1,12 +1,12 @@
-# D2-Project: Sprint 4 (Production Data Ingestion, Course Marks & UI Refinement)
+﻿# D2-Project: Sprint 4 (Production Data Ingestion, Course Marks & UI Refinement)
 
 * **Official Kanban Board:** `D2-Project: Sprint 4` *(Created on: 09/30/2026)*
 * **Sprint Timeline:** `September 30, 2026 – November 05, 2026` (`30.09.2026 – 05.11.2026`)
 * **Sprint Status:** Closed / Beta Stage Delivered
 * **Total Story Points:** 58 Points
 * **Total Work Items:** 23 Items (18 User Stories, 3 Technical Tasks, 2 Critical Bug Fixes)
-* **Git Release Branch:** [`release/sprint-4-v0.4.0-beta`](https://gitlab.gwdg.de/sudarshan.bashyal/d2-project-client/-/tree/release/sprint-4-v0.4.0-beta)
-* **Git Release Tag:** [`v0.4.0-beta`](https://gitlab.gwdg.de/sudarshan.bashyal/d2-project-client/-/tags/v0.4.0-beta) (`release-sprint-4-v0.4.0-beta`)
+* **Git Release Branch:** [`release/sprint-4-v0.4.0-beta`](https://github.com/poalelungi-ion/d2-project-client/-/tree/release/sprint-4-v0.4.0-beta)
+* **Git Release Tag:** [`v0.4.0-beta`](https://github.com/poalelungi-ion/d2-project-client/-/tags/v0.4.0-beta) (`release-sprint-4-v0.4.0-beta`)
 * **Target Delivery Release:** `v0.4.0-beta` (Beta Stage Milestone - Latest)
 
 ---
@@ -15,24 +15,24 @@
 
 | # | Work Item ID | Type | Title / Description | Assignee | Points | Status | Priority |
 | :-: | :--- | :--- | :--- | :--- | :-: | :---: | :---: |
-| 1 | **#99906** | USER STORY | Strict Column Name Standardization on File Import | Yazan Al Rifaee | 5 pts | Tested | High |
-| 2 | **#104084** | USER STORY | Restrict Grade Parsing to Numeric 1.0–5.0 | Yazan Al Rifaee | 3 pts | Tested | High |
-| 3 | **#104089 / #97743** | USER STORY | Design the Validation & Review Screen with Inline Editing | Yazan Al Rifaee | 8 pts | Tested | High |
+| 1 | **#99906** | USER STORY | Strict Column Name Standardization on File Import | Ion Poalelungi | 5 pts | Tested | High |
+| 2 | **#104084** | USER STORY | Restrict Grade Parsing to Numeric 1.0–5.0 | Ion Poalelungi | 3 pts | Tested | High |
+| 3 | **#104089 / #97743** | USER STORY | Design the Validation & Review Screen with Inline Editing | Ion Poalelungi | 8 pts | Tested | High |
 | 4 | **#104102** | USER STORY | Redesign Study Program Mapping & Dynamic Column Ingestion | Ion Poalelungi | 5 pts | Tested | Normal |
-| 5 | **#104109** | USER STORY | Free-Form Exam Attempt Text Field Across UI & Backend | Yazan Al Rifaee | 3 pts | Tested | Normal |
-| 6 | **#104098** | USER STORY | Consolidated Best Mark Column in Course Marks Table | Yazan Al Rifaee | 3 pts | Tested | Normal |
-| 7 | **#104104** | USER STORY | Display Chronological Mark History Upon Clicking Best Mark | Sudarshan Bashyal | 3 pts | Tested | Normal |
-| 8 | **#99891** | USER STORY | Decimal Formatting for Grades Column (German Comma) | Yazan Al Rifaee | 2 pts | Tested | Normal |
-| 9 | **#99896** | USER STORY | Average Grade Display per Semester in Course Header | Yazan Al Rifaee | 3 pts | Tested | Normal |
-| 10 | **#99908** | USER STORY | Restrict Grade Editing to Lecture View Only | Yazan Al Rifaee | 3 pts | Tested | Normal |
-| 11 | **#99888** | USER STORY | Edit Button Added to Course Page Header | Yazan Al Rifaee | 1 pt | Tested | Normal |
+| 5 | **#104109** | USER STORY | Free-Form Exam Attempt Text Field Across UI & Backend | Ion Poalelungi | 3 pts | Tested | Normal |
+| 6 | **#104098** | USER STORY | Consolidated Best Mark Column in Course Marks Table | Ion Poalelungi | 3 pts | Tested | Normal |
+| 7 | **#104104** | USER STORY | Display Chronological Mark History Upon Clicking Best Mark | Ion Poalelungi | 3 pts | Tested | Normal |
+| 8 | **#99891** | USER STORY | Decimal Formatting for Grades Column (German Comma) | Ion Poalelungi | 2 pts | Tested | Normal |
+| 9 | **#99896** | USER STORY | Average Grade Display per Semester in Course Header | Ion Poalelungi | 3 pts | Tested | Normal |
+| 10 | **#99908** | USER STORY | Restrict Grade Editing to Lecture View Only | Ion Poalelungi | 3 pts | Tested | Normal |
+| 11 | **#99888** | USER STORY | Edit Button Added to Course Page Header | Ion Poalelungi | 1 pt | Tested | Normal |
 | 12 | **#99913 / #104081** | USER STORY | Study Program Selection Dropdown with Immediate Persistence | Ion Poalelungi | 2 pts | Tested | Normal |
-| 13 | **#101781** | USER STORY | Edit Exam Detail from Course Overview | Yazan Al Rifaee | 2 pts | Tested | Normal |
+| 13 | **#101781** | USER STORY | Edit Exam Detail from Course Overview | Ion Poalelungi | 2 pts | Tested | Normal |
 | 14 | **#104092 / #104090** | USER STORY | Dedicated Course Drive Tab & Decoupling from Requirements | Anna Chiriciuc | 3 pts | Tested | Normal |
 | 15 | **#104085** | USER STORY | Exclude Students Without Valid Grades from Persistence | Ion Poalelungi | 2 pts | Tested | Normal |
 | 16 | **#104080** | USER STORY | Disable Default Seed Data in Production Delivery | Ion Poalelungi | 2 pts | Tested | Normal |
 | 17 | **#104082 / #104083** | TASK | Deprecate Student Status Selector & Remove Graduate/Fail Actions | Ion Poalelungi | 2 pts | Tested | Normal |
-| 18 | **#104086** | TASK | Remove Obsolete ECTS Column & Schema Fields | Yazan Al Rifaee | 1 pt | Tested | Normal |
+| 18 | **#104086** | TASK | Remove Obsolete ECTS Column & Schema Fields | Ion Poalelungi | 1 pt | Tested | Normal |
 | 19 | **#104087** | USER STORY | Restrict Data Upload Entry Point Exclusively to Course Detail | Anna Chiriciuc | 2 pts | Tested | Normal |
 | 20 | **#104091** | USER STORY | Clear Staged File Capability Before Confirmation | Anna Chiriciuc | 1 pt | Tested | Normal |
 | 21 | **#104095** | USER STORY | Full Viewport Responsive Layout Across Grids and Dialogs | Anna Chiriciuc | 3 pts | Tested | Normal |

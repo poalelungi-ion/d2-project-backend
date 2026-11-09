@@ -1,4 +1,4 @@
-# Project Handover & Delivery Checklist
+﻿# Project Handover & Delivery Checklist
 
 This checklist is designed for project evaluators, client stakeholders, or incoming development teams receiving the **Study Progress Analysis (SPA)** platform.
 
@@ -6,8 +6,8 @@ This checklist is designed for project evaluators, client stakeholders, or incom
 
 ## 📋 Handover Verification Package
 
-* [x] **Client Source Code:** [`d2-project-client`](https://gitlab.gwdg.de/sudarshan.bashyal/d2-project-client) (Branch: `feature/login-settings-and-api-config` / `main`)
-* [x] **Backend Source Code:** [`d2-project-backend`](https://gitlab.gwdg.de/sudarshan.bashyal/d2-project-backend) (Branch: `feature/cors-config-hardening` / `main`)
+* [x] **Client Source Code:** [`d2-project-client`](https://github.com/poalelungi-ion/d2-project-client) (Branch: `feature/login-settings-and-api-config` / `main`)
+* [x] **Backend Source Code:** [`d2-project-backend`](https://github.com/poalelungi-ion/d2-project-backend) (Branch: `feature/cors-config-hardening` / `main`)
 * [x] **Central Docker Compose Orchestration:** [`docker-compose.yml`](file:///c:/Users/ionut/Desktop/D2_Project/docker-compose.yml)
 * [x] **Traceability Matrix:** [`wiki/Traceability-Matrix.md`](file:///c:/Users/ionut/Desktop/D2_Project/wiki/Traceability-Matrix.md) mapping all 27 Sprint 3 items
 * [x] **Complete Project Wiki:** [`wiki/Home.md`](file:///c:/Users/ionut/Desktop/D2_Project/wiki/Home.md)
@@ -22,7 +22,7 @@ When booting with `SEED_ON_STARTUP=true`, the following demonstrative records ar
 ### 1. Default University Staff Accounts
 * **Staff Member 1:** `poalelungi@uni-hildesheim.de`
 * **Staff Member 2:** `chiriciuc@uni-hildesheim.de`
-* **Staff Member 3:** `sudarshan.bashyal@uni-hildesheim.de`
+* **Staff Member 3:** `poalelungi@uni-hildesheim.de`
 * **Default Password:** `Password123!` (or register any new `@uni-hildesheim.de` account)
 
 ### 2. Database Service Credentials

@@ -1,4 +1,4 @@
-# Study Progress Analysis (SPA) System — Project Wiki
+﻿# Study Progress Analysis (SPA) System — Project Wiki
 
 Welcome to the central documentation wiki for the **Study Progress Analysis (SPA)** project developed at **Stiftung Universität Hildesheim (Software Systems Engineering - SSE)**.
 
@@ -42,14 +42,9 @@ The system allows university lecturers and academic staff to ingest heterogeneou
 
 ---
 
-## 👥 Core Project Team (Group D2)
+## 👥 Core Project Team
 
 | Name | Role | Mail |
 | :--- | :--- | :--- |
-| **Ion Poalelungi** | Architecture & Frontend Lead | `poalelungi@uni-hildesheim.de` |
-| **Anna Chiriciuc** | Frontend & Quality Assurance | `chiriciuc@uni-hildesheim.de` |
-| **Sudarshan Bashyal** | Backend Lead & Security | `sudarshan.bashyal@uni-hildesheim.de` |
-| **Yazan Al Rifaee** | Full-Stack Developer | `alrifaee@uni-hildesheim.de` |
-| **Marvin Wucher** | Full-Stack Developer | `wucher@uni-hildesheim.de` |
-| **Amara Aslam** | Frontend Developer | `aslam@uni-hildesheim.de` |
-| **Aditi Joshi** | QA & Frontend Developer | `joshi@uni-hildesheim.de` |
+| **Ion Poalelungi** | Architecture & Lead Developer | poalelungi@uni-hildesheim.de |
+| **Anna Chiriciuc** | Frontend & Quality Assurance | chiriciuc@uni-hildesheim.de |
